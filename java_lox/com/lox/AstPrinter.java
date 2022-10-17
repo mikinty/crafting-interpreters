@@ -1,5 +1,6 @@
 package java_lox.com.lox;
 
+import java_lox.com.lox.Expr.Assign;
 import java_lox.com.lox.Expr.Variable;
 
 class AstPrinter implements Expr.Visitor<String> {
@@ -44,5 +45,10 @@ class AstPrinter implements Expr.Visitor<String> {
     @Override
     public String visitVariableExpr(Variable expr) {
         return "var " + expr.name.lexeme;
+    }
+
+    @Override
+    public String visitAssignExpr(Assign expr) {
+        return "assign var " + expr.name.lexeme;
     }
 }
