@@ -53,11 +53,23 @@ public class Lox {
 
         if (hadError) return;
 
+        Resolver resolver = new Resolver(interpreter);
+        resolver.resolve(statements);
+        
+        if (hadError) return;
+
         interpreter.interpret(statements);
     }
 
     static void error(int line, String message) {
         report(line, "", message);
+    }
+    
+    static void error(String message) {
+        System.err.println(
+            "[line unknown] Error: " + message
+        );
+        hadError = true;
     }
 
     private static void report(int line, String where, String message) {
