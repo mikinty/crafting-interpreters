@@ -3,6 +3,13 @@
 #include <iostream>
 
 InterpretResult VM::run() {
+#define BINARY_OP(op) \
+  do { \
+    Value b = this->stack.back();\
+    this->stack.pop_back();\
+    this->stack.back() = this->stack.back() op b;\
+  } while (false)
+
   this->ip = 0;
   while (this->ip < this->chunk.code.size()) {
     #ifdef DEBUG_TRACE_EXECUTION
@@ -25,11 +32,13 @@ InterpretResult VM::run() {
         }
       case OP_NEGATE:
         {
-          Value backValue = this->stack.back();
-          this->stack.pop_back();
-          this->stack.push_back(-backValue);
+          this->stack.back() = -this->stack.back();
           break;
         }
+      case OP_ADD: BINARY_OP(+); break;
+      case OP_SUBTRACT: BINARY_OP(-); break;
+      case OP_MULTIPLY: BINARY_OP(*); break;
+      case OP_DIVIDE: BINARY_OP(/); break;
       case OP_RETURN:
         {
           Value backValue = this->stack.back();
@@ -40,6 +49,7 @@ InterpretResult VM::run() {
         }
     }
   }
+#undef BINARY_OP
 }
 
 InterpretResult VM::interpret(Chunk chunk) {
