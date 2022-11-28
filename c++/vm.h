@@ -2,6 +2,7 @@
 #define clox_vm_h
 
 #include "chunk.h"
+#include <vector>
 
 typedef enum {
   INTERPRET_OK,
@@ -13,6 +14,7 @@ class VM {
   private:
     Chunk chunk;
     size_t ip;
+    std::vector<Value> stack;
     InterpretResult run();
 
   public:

@@ -44,6 +44,9 @@ int Chunk::disassembleInstruction(int offset) {
     case OP_CONSTANT:
       return constantInstruction("OP_CONSTANT", offset);
       break;
+    case OP_NEGATE:
+      return simpleInstruction("OP_NEGATE", offset);
+      break;
     case OP_RETURN:
       return simpleInstruction("OP_RETURN", offset);
       break;

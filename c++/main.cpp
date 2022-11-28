@@ -10,6 +10,7 @@ int main(int argc, const char* argv[]) {
   int lineNumber = 123;
   chunk.writeChunk(OP_CONSTANT, lineNumber);
   chunk.writeChunk(constant, lineNumber);
+  chunk.writeChunk(OP_NEGATE, lineNumber);
   chunk.writeChunk(OP_RETURN, lineNumber);
   chunk.disassembleChunk();
   vm.interpret(chunk);

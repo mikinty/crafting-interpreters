@@ -6,6 +6,12 @@ InterpretResult VM::run() {
   this->ip = 0;
   while (this->ip < this->chunk.code.size()) {
     #ifdef DEBUG_TRACE_EXECUTION
+    for (Value value : this->stack) {
+      std::cout << "[ ";
+      printValue(value);
+      std::cout << " ]";
+    }
+    std::cout << "\n";
     this->chunk.disassembleInstruction(this->ip);
     #endif
     uint8_t instruction = this->chunk.code[this->ip++];
@@ -14,12 +20,24 @@ InterpretResult VM::run() {
       case OP_CONSTANT:
         {
           Value constant = this->chunk.constants[this->chunk.code[this->ip++]];
-          printValue(constant);
-          std::cout << "\n";
+          this->stack.push_back(constant);
+          break;
+        }
+      case OP_NEGATE:
+        {
+          Value backValue = this->stack.back();
+          this->stack.pop_back();
+          this->stack.push_back(-backValue);
           break;
         }
       case OP_RETURN:
-        return INTERPRET_OK;
+        {
+          Value backValue = this->stack.back();
+          this->stack.pop_back();
+          printValue(backValue);
+          std::cout << "\n";
+          return INTERPRET_OK;
+        }
     }
   }
 }
