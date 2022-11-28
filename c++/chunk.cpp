@@ -4,8 +4,9 @@
 #include <fmt/core.h>
 #include <fmt/printf.h>
 
-void Chunk::writeChunk(uint8_t byte) {
+void Chunk::writeChunk(uint8_t byte, int line) {
   this->code.push_back(byte);
+  this->lines.push_back(line);
 }
 
 void Chunk::freeChunk() {
@@ -31,8 +32,13 @@ int Chunk::constantInstruction(const std::string& name, int offset) {
 }
 
 void Chunk::disassembleChunk() {
-  for (int offset = 0; offset < this->code.size(); offset++) {
+  for (int offset = 0; offset < this->code.size();) {
     std::cout << std::setfill('0') << std::setw(4) << offset << " ";
+    if (offset > 0 && this->lines[offset] == this->lines[offset-1]) {
+      std::cout << "   | ";
+    } else {
+      fmt::printf("%4d ", this->lines[offset]);
+    }
 
     uint8_t instruction = this->code[offset];
     switch (instruction) {

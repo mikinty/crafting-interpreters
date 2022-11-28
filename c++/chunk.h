@@ -15,12 +15,13 @@ class Chunk {
 private:
   std::vector<uint8_t> code;
   std::vector<Value> constants;
+  std::vector<int> lines;
   int offset = 0;
 
   int constantInstruction(const std::string& name, int offset);
 
 public:
-  void writeChunk(uint8_t byte);
+  void writeChunk(uint8_t byte, int line);
   void disassembleChunk();
   void freeChunk();
   int addConstant(Value value);
