@@ -5,6 +5,9 @@
 InterpretResult VM::run() {
   this->ip = 0;
   while (this->ip < this->chunk.code.size()) {
+    #ifdef DEBUG_TRACE_EXECUTION
+    this->chunk.disassembleInstruction(this->ip);
+    #endif
     uint8_t instruction = this->chunk.code[this->ip++];
 
     switch (instruction) {

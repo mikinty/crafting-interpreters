@@ -31,27 +31,31 @@ int Chunk::constantInstruction(const std::string& name, int offset) {
   return offset + 2;
 }
 
+int Chunk::disassembleInstruction(int offset) {
+  std::cout << std::setfill('0') << std::setw(4) << offset << " ";
+  if (offset > 0 && this->lines[offset] == this->lines[offset-1]) {
+    std::cout << "   | ";
+  } else {
+    fmt::printf("%4d ", this->lines[offset]);
+  }
+
+  uint8_t instruction = this->code[offset];
+  switch (instruction) {
+    case OP_CONSTANT:
+      return constantInstruction("OP_CONSTANT", offset);
+      break;
+    case OP_RETURN:
+      return simpleInstruction("OP_RETURN", offset);
+      break;
+    default:
+      std::cout << fmt::format("Unknown opcode {}\n", instruction);
+      return offset + 1;
+  }
+}
+
 void Chunk::disassembleChunk() {
   for (int offset = 0; offset < this->code.size();) {
-    std::cout << std::setfill('0') << std::setw(4) << offset << " ";
-    if (offset > 0 && this->lines[offset] == this->lines[offset-1]) {
-      std::cout << "   | ";
-    } else {
-      fmt::printf("%4d ", this->lines[offset]);
-    }
-
-    uint8_t instruction = this->code[offset];
-    switch (instruction) {
-      case OP_CONSTANT:
-        offset = constantInstruction("OP_CONSTANT", offset);
-        break;
-      case OP_RETURN:
-        offset = simpleInstruction("OP_RETURN", offset);
-        break;
-      default:
-        std::cout << fmt::format("Unknown opcode {}\n", instruction);
-        offset++;
-    }
+    offset = disassembleInstruction(offset);
   }
 }
 

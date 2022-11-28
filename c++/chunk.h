@@ -23,6 +23,7 @@ public:
   std::vector<uint8_t> code;
   void writeChunk(uint8_t byte, int line);
   void disassembleChunk();
+  int disassembleInstruction(int offset);
   void freeChunk();
   int addConstant(Value value);
 };
