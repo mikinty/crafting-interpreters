@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-static void repl() {
+static void repl(VM& vm) {
   std::string line;
 
   for (;;) {
@@ -13,7 +13,7 @@ static void repl() {
       std::cout << std::endl;
       break;
     }
-    interpret(line);
+    vm.interpret(line);
   }
 }
 
@@ -24,9 +24,9 @@ static std::string readFile(const std::string& path) {
   return buffer.str();
 }
 
-static void runFile(const std::string& path) {
+static void runFile(VM& vm, const std::string& path) {
   std::string source = readFile(path);
-  InterpretResult result = interpret(source);
+  InterpretResult result = vm.interpret(source);
 
   if (result == INTERPRET_COMPILE_ERROR) exit(65);
   if (result == INTERPRET_RUNTIME_ERROR) exit(70);
@@ -36,9 +36,9 @@ int main(int argc, const char* argv[]) {
   VM vm;
 
   if (argc == 1) {
-    repl();
+    repl(vm);
   } else if (argc == 2) {
-    runFile(argv[1]);
+    runFile(vm, argv[1]);
   } else {
     std::fprintf(stderr, "Usage: clox [path]\n");
     exit(64);
