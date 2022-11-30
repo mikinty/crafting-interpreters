@@ -1,30 +1,48 @@
 #include "chunk.h"
 #include "vm.h"
 #include <iostream>
+#include <string>
+#include <fstream>
+#include <sstream>
+
+static void repl() {
+  std::string line;
+
+  for (;;) {
+    if (std::getline(std::cin, line)) {
+      std::cout << std::endl;
+      break;
+    }
+    interpret(line);
+  }
+}
+
+static std::string readFile(const std::string& path) {
+  std::ifstream fileStream(path);
+  std::stringstream buffer;
+  buffer << fileStream.rdbuf();
+  return buffer.str();
+}
+
+static void runFile(const std::string& path) {
+  std::string source = readFile(path);
+  InterpretResult result = interpret(source);
+
+  if (result == INTERPRET_COMPILE_ERROR) exit(65);
+  if (result == INTERPRET_RUNTIME_ERROR) exit(70);
+}
 
 int main(int argc, const char* argv[]) {
   VM vm;
-  Chunk chunk;
 
-  int constant = chunk.addConstant(1.2);
-  int lineNumber = 123;
-  chunk.writeChunk(OP_CONSTANT, lineNumber);
-  chunk.writeChunk(constant, lineNumber);
+  if (argc == 1) {
+    repl();
+  } else if (argc == 2) {
+    runFile(argv[1]);
+  } else {
+    std::fprintf(stderr, "Usage: clox [path]\n");
+    exit(64);
+  }
 
-  constant = chunk.addConstant(3.4);
-  chunk.writeChunk(OP_CONSTANT, lineNumber);
-  chunk.writeChunk(constant, lineNumber);
-  chunk.writeChunk(OP_ADD, lineNumber);
-
-  constant = chunk.addConstant(5.6);
-  chunk.writeChunk(OP_CONSTANT, lineNumber);
-  chunk.writeChunk(constant, lineNumber);
-  chunk.writeChunk(OP_DIVIDE, lineNumber);
-
-  chunk.writeChunk(OP_NEGATE, lineNumber);
-  chunk.writeChunk(OP_RETURN, lineNumber);
-  chunk.disassembleChunk();
-  vm.interpret(chunk);
-  chunk.freeChunk();
   return 0;
 }

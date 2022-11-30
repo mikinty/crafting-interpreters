@@ -18,7 +18,7 @@ class VM {
     InterpretResult run();
 
   public:
-    InterpretResult interpret(Chunk chunk);
+    InterpretResult interpret(std::string& source);
 };
 
 #endif

@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "chunk.h"
+#include "compiler.h"
 #include <iostream>
 
 InterpretResult VM::run() {
@@ -52,7 +53,7 @@ InterpretResult VM::run() {
 #undef BINARY_OP
 }
 
-InterpretResult VM::interpret(Chunk chunk) {
+InterpretResult VM::interpret(std::string& source) {
   this->chunk = chunk;
   return run();
 }
