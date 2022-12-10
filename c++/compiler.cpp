@@ -67,24 +67,24 @@ void Parser::advance() {
   previous = current;
 
   for (;;) {
-    current = this->scanner.scanToken();
+    current = scanner.scanToken();
     if (current.type != TOKEN_ERROR) break;
 
-    errorAtCurrent(this->current.source);
+    errorAtCurrent(current.source);
   }
 }
 
 void Parser::errorAtCurrent(const std::string& message) {
-  this->errorAt(this->current, message);
+  errorAt(current, message);
 }
 
 void Parser::error(const std::string& message) {
-  this->errorAt(this->previous, message);
+  errorAt(previous, message);
 }
 
 void Parser::errorAt(Token& token, const std::string& message) {
-  if (this->panicMode) return;
-  this->panicMode = true;
+  if (panicMode) return;
+  panicMode = true;
 
   std::fprintf(stderr, "[line %d] Error", token.line);
 
@@ -97,49 +97,49 @@ void Parser::errorAt(Token& token, const std::string& message) {
   }
 
   fprintf(stderr, ": %s\n", message.c_str());
-  this->hadError = true;
+  hadError = true;
 }
 
 bool Parser::getHadError() {
-  return this->hadError;
+  return hadError;
 }
 
 void Parser::consume(const TokenType type, const std::string& message) {
-  if (this->current.type == type) {
+  if (current.type == type) {
     advance();
     return;
   }
 
-  this->errorAtCurrent(message);
+  errorAtCurrent(message);
 }
 
 void Parser::emitByte(uint8_t byte) {
-  this->currentChunk().writeChunk(byte, this->previous.line);
+  currentChunk().writeChunk(byte, previous.line);
 }
 
 void Parser::emitBytes(uint8_t byte1, uint8_t byte2) {
-  this->emitByte(byte1);
-  this->emitByte(byte2);
+  emitByte(byte1);
+  emitByte(byte2);
 }
 
 Chunk& Parser::currentChunk() {
-  return this->compilingChunk; 
+  return compilingChunk; 
 }
 
 void Parser::emitReturn() {
   emitByte(OP_RETURN);
 #ifdef DEBUG_PRINT_CODE
-  if (this->hadError) {
+  if (hadError) {
     std::cout << "finished with errors\n";
   }
-  this->currentChunk().disassembleChunk();
+  currentChunk().disassembleChunk();
 #endif
 }
 
 uint8_t Parser::makeConstant(Value value) {
-  int constant = this->compilingChunk.addConstant(value);
+  int constant = compilingChunk.addConstant(value);
   if (constant > UINT8_MAX) {
-    this->error("Too many constants in one chunk.");
+    error("Too many constants in one chunk.");
     return 0;
   }
 
@@ -147,7 +147,7 @@ uint8_t Parser::makeConstant(Value value) {
 }
 
 void Parser::emitConstant(double value) {
-  this->emitBytes(OP_CONSTANT, makeConstant(value));
+  emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
 void Parser::endCompiler() {
@@ -155,28 +155,28 @@ void Parser::endCompiler() {
 }
 
 void Parser::number() {
-  double value = std::stod(this->previous.source.substr(previous.start, previous.length));
-  this->emitConstant(value);
+  double value = std::stod(previous.source.substr(previous.start, previous.length));
+  emitConstant(value);
 }
 
 void Parser::grouping() {
-  this->expression();
-  this->consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
 void Parser::unary() {
-  TokenType operatorType = this->previous.type;
+  TokenType operatorType = previous.type;
 
   // Compile the operand
-  this->parsePrecedence(PREC_UNARY);
+  parsePrecedence(PREC_UNARY);
 
   // Emit the operator instruction
   switch(operatorType) {
     case TOKEN_MINUS:
-      this->emitByte(OP_NEGATE);
+      emitByte(OP_NEGATE);
       break;
     default:
-      this->error("This should not be reachable in unary operator types");
+      error("This should not be reachable in unary operator types");
       return;
   }
 }
@@ -186,7 +186,7 @@ static ParseRule& getRule(TokenType type) {
 }
 
 void Parser::binary() {
-  TokenType operatorType = this->previous.type;
+  TokenType operatorType = previous.type;
   ParseRule rule = getRule(operatorType);
   parsePrecedence((Precedence)(rule.getPrecedence() + 1));
 
@@ -196,14 +196,14 @@ void Parser::binary() {
     case TOKEN_STAR:  emitByte(OP_MULTIPLY); break;
     case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
     default:
-      this->error("This should not be reachable in binary operator types");
+      error("This should not be reachable in binary operator types");
       return;
   }
 }
 
 void Parser::parsePrecedence(Precedence precedence) {
   advance();
-  ParseFn prefixRule = getRule(this->previous.type).getPrefix();
+  ParseFn prefixRule = getRule(previous.type).getPrefix();
   if (prefixRule == NULL) {
     error("Expect expression.");
     return;

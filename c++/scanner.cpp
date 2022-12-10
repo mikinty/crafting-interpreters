@@ -12,9 +12,9 @@ static bool isAlpha(char c) {
 
 Scanner::Scanner(const std::string& source) {
   this->source = std::move(source);
-  this->start = 0;
-  this->current = 0;
-  this->line = 1;
+  start = 0;
+  current = 0;
+  line = 1;
 }
 
 bool Scanner::isAtEnd() {
@@ -22,32 +22,32 @@ bool Scanner::isAtEnd() {
 }
 
 char Scanner::advance() {
-  this->current++;
-  return this->source[this->current-1];
+  current++;
+  return source[current-1];
 }
 
 bool Scanner::match(char expected) {
   if (isAtEnd()) return false;
-  if (this->source[this->current] != expected) return false;
-  this->current++;
+  if (source[current] != expected) return false;
+  current++;
   return true;
 }
 
 Token Scanner::makeToken(TokenType type) {
-  return Token(type, this->start, this->current - this->start, this->line, this->source);
+  return Token(type, start, current - start, line, source);
 }
 
 Token Scanner::errorToken(const std::string& message) {
-  return Token(TOKEN_ERROR, 0, message.size(), this->line, message);
+  return Token(TOKEN_ERROR, 0, message.size(), line, message);
 }
 
 char Scanner::peek() {
-  return this->source[this->current];
+  return source[current];
 }
 
 char Scanner::peekNext() {
   if (isAtEnd()) return '\0';
-  return this->source[this->current+1];
+  return source[current+1];
 }
 
 void Scanner::skipWhitespace() {
@@ -60,7 +60,7 @@ void Scanner::skipWhitespace() {
         advance();
         break;
       case '\n':
-        this->line++;
+        line++;
         advance();
         break;
       case '/':
@@ -78,7 +78,7 @@ void Scanner::skipWhitespace() {
 
 Token Scanner::string() {
   while (peek() != '"' && !isAtEnd()) {
-    if (peek() == '\n') this->line++;
+    if (peek() == '\n') line++;
     advance();
   }
 
@@ -107,17 +107,17 @@ Token Scanner::identifier() {
 }
 
 TokenType Scanner::checkKeyword(int start, int length, const std::string& rest, TokenType type) {
-  return (this->source.substr(start, length) == rest) ? type : TOKEN_IDENTIFIER;
+  return (source.substr(start, length) == rest) ? type : TOKEN_IDENTIFIER;
 }
 
 TokenType Scanner::identifierType() {
-  switch (this->source[this->start]) {
+  switch (source[start]) {
     case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
     case 'c': return checkKeyword(1, 4, "lass", TOKEN_CLASS);
     case 'e': return checkKeyword(1, 3, "lse", TOKEN_ELSE);
     case 'f': 
-      if (this->current - this->start > 1) {
-        switch (this->source[this->start+1]) {
+      if (current - start > 1) {
+        switch (source[start+1]) {
           case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
           case 'o': return checkKeyword(2, 2, "or", TOKEN_FOR);          
           case 'u': return checkKeyword(2, 2, "un", TOKEN_FUN);
@@ -131,8 +131,8 @@ TokenType Scanner::identifierType() {
     case 'r': return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
     case 's': return checkKeyword(1, 4, "uper", TOKEN_SUPER);
     case 't': 
-      if (this->current - this->start > 1) {
-        switch (this->source[this->start+1]) {
+      if (current - start > 1) {
+        switch (source[start+1]) {
           case 'h': return checkKeyword(2, 2, "is", TOKEN_THIS);          
           case 'r': return checkKeyword(2, 3, "rue", TOKEN_TRUE);          
         }
@@ -147,7 +147,7 @@ TokenType Scanner::identifierType() {
 
 Token Scanner::scanToken() {
   skipWhitespace();
-  this->start = this->current;
+  start = current;
 
   if (isAtEnd()) return makeToken(TOKEN_EOF);
 

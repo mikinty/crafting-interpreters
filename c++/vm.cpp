@@ -6,34 +6,34 @@
 InterpretResult VM::run() {
 #define BINARY_OP(op) \
   do { \
-    Value b = this->stack.back();\
-    this->stack.pop_back();\
-    this->stack.back() = this->stack.back() op b;\
+    Value b = stack.back();\
+    stack.pop_back();\
+    stack.back() = stack.back() op b;\
   } while (false)
 
-  this->ip = 0;
-  while (this->ip < this->chunk.code.size()) {
+  ip = 0;
+  while (ip < chunk.code.size()) {
     #ifdef DEBUG_TRACE_EXECUTION
-    for (Value value : this->stack) {
+    for (Value value : stack) {
       std::cout << "[ ";
       printValue(value);
       std::cout << " ]";
     }
     std::cout << "\n";
-    this->chunk.disassembleInstruction(this->ip);
+    chunk.disassembleInstruction(ip);
     #endif
-    uint8_t instruction = this->chunk.code[this->ip++];
+    uint8_t instruction = chunk.code[ip++];
 
     switch (instruction) {
       case OP_CONSTANT:
         {
-          Value constant = this->chunk.constants[this->chunk.code[this->ip++]];
-          this->stack.push_back(constant);
+          Value constant = chunk.constants[chunk.code[ip++]];
+          stack.push_back(constant);
           break;
         }
       case OP_NEGATE:
         {
-          this->stack.back() = -this->stack.back();
+          stack.back() = -stack.back();
           break;
         }
       case OP_ADD: BINARY_OP(+); break;
@@ -42,8 +42,8 @@ InterpretResult VM::run() {
       case OP_DIVIDE: BINARY_OP(/); break;
       case OP_RETURN:
         {
-          Value backValue = this->stack.back();
-          this->stack.pop_back();
+          Value backValue = stack.back();
+          stack.pop_back();
           printValue(backValue);
           std::cout << "\n";
           return INTERPRET_OK;
@@ -60,8 +60,8 @@ InterpretResult VM::interpret(std::string& source) {
     return INTERPRET_COMPILE_ERROR;
   }
 
-  this->chunk = chunk;
-  this->ip = 0;
+  chunk = chunk;
+  ip = 0;
 
   return run();
 }

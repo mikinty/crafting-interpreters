@@ -5,12 +5,12 @@
 #include <fmt/printf.h>
 
 void Chunk::writeChunk(uint8_t byte, int line) {
-  this->code.push_back(byte);
-  this->lines.push_back(line);
+  code.push_back(byte);
+  lines.push_back(line);
 }
 
 void Chunk::freeChunk() {
-  this->code.clear();
+  code.clear();
 }
 
 // DEBUG: Printing instructions
@@ -24,22 +24,22 @@ static int simpleInstruction(const std::string& name, int offset) {
 }
 
 int Chunk::constantInstruction(const std::string& name, int offset) {
-  uint8_t constantIndex = this->code[offset + 1];
+  uint8_t constantIndex = code[offset + 1];
   fmt::printf("%-16s %4d '", name, constantIndex);
-  printValue(this->constants[constantIndex]);
+  printValue(constants[constantIndex]);
   std::cout << "'\n";
   return offset + 2;
 }
 
 int Chunk::disassembleInstruction(int offset) {
   std::cout << std::setfill('0') << std::setw(4) << offset << " ";
-  if (offset > 0 && this->lines[offset] == this->lines[offset-1]) {
+  if (offset > 0 && lines[offset] == lines[offset-1]) {
     std::cout << "   | ";
   } else {
-    fmt::printf("%4d ", this->lines[offset]);
+    fmt::printf("%4d ", lines[offset]);
   }
 
-  uint8_t instruction = this->code[offset];
+  uint8_t instruction = code[offset];
   switch (instruction) {
     case OP_CONSTANT:
       return constantInstruction("OP_CONSTANT", offset);
@@ -69,7 +69,7 @@ int Chunk::disassembleInstruction(int offset) {
 }
 
 void Chunk::disassembleChunk() {
-  for (int offset = 0; offset < this->code.size();) {
+  for (int offset = 0; offset < code.size();) {
     offset = disassembleInstruction(offset);
   }
 }
@@ -79,6 +79,6 @@ void Chunk::disassembleChunk() {
  * @return The index of the added value
  */
 int Chunk::addConstant(Value value) {
-  this->constants.push_back(value);
-  return this->constants.size() - 1;
+  constants.push_back(value);
+  return constants.size() - 1;
 }
