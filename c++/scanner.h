@@ -48,7 +48,6 @@ class Scanner {
     int current;
     int line;
     bool isAtEnd();
-    char advance();
     bool match(char expected);
     void skipWhitespace();
     char peek();
@@ -61,6 +60,7 @@ class Scanner {
 
   public:
     Scanner(const std::string& source);
+    char advance();
     Token scanToken();
     Token makeToken(TokenType type);
     Token errorToken(const std::string& message);
