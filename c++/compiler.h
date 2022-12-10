@@ -29,9 +29,9 @@ private:
   Token &current;
   Token &previous;
   Scanner &scanner;
+  Chunk compilingChunk;
   bool hadError;
   bool panicMode;
-  Chunk compilingChunk;
 
 public:
   Parser(Token &current, Token &previous, Scanner &scanner, Chunk &chunk) : current(current), previous(previous), scanner(scanner), compilingChunk(chunk), hadError(false), panicMode(false) {}

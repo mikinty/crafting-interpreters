@@ -18,7 +18,7 @@ Scanner::Scanner(const std::string& source) {
 }
 
 bool Scanner::isAtEnd() {
-  return this->source[this->current] == '\0';
+  return current >= source.size();
 }
 
 char Scanner::advance() {

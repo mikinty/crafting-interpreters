@@ -9,7 +9,7 @@ static void repl(VM& vm) {
   std::string line;
 
   for (;;) {
-    if (std::getline(std::cin, line)) {
+    if (!std::getline(std::cin, line)) {
       std::cout << std::endl;
       break;
     }

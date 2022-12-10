@@ -2,7 +2,9 @@
 #include "scanner.h"
 #include "common.h"
 #include <fstream>
+#include <iostream>
 #include <map>
+#include <fmt/core.h>
 
 std::map<TokenType, ParseRule> rules = {
   {TOKEN_LEFT_PAREN, ParseRule(&Parser::grouping, NULL, PREC_NONE)},
@@ -49,26 +51,26 @@ std::map<TokenType, ParseRule> rules = {
 
 /*** ParseRule Implementation ***/
 Precedence ParseRule::getPrecedence() {
-  return this->precedence;
+  return precedence;
 }
 
 ParseFn ParseRule::getPrefix() {
-  return this->prefix;  
+  return prefix;  
 }
 
 ParseFn ParseRule::getInfix() {
-  return this->infix; 
+  return infix; 
 }
 
 /*** Parser Implementation ***/
 void Parser::advance() {
-  this->previous = this->current;
+  previous = current;
 
   for (;;) {
-    this->current = this->scanner.scanToken();
-    if (this->current.type != TOKEN_ERROR) break;
+    current = this->scanner.scanToken();
+    if (current.type != TOKEN_ERROR) break;
 
-    this->errorAtCurrent(this->current.source);
+    errorAtCurrent(this->current.source);
   }
 }
 
@@ -91,10 +93,10 @@ void Parser::errorAt(Token& token, const std::string& message) {
   } else if (token.type == TOKEN_ERROR) {
     // Nothing
   } else {
-    fprintf(stderr, " at '%.*s'", token.length, token.start);
+    fprintf(stderr, "%s", fmt::format(" at '{}'", token.source).c_str());
   }
 
-  fprintf(stderr, ": %s\n", message);
+  fprintf(stderr, ": %s\n", message.c_str());
   this->hadError = true;
 }
 
@@ -104,7 +106,7 @@ bool Parser::getHadError() {
 
 void Parser::consume(const TokenType type, const std::string& message) {
   if (this->current.type == type) {
-    this->advance();
+    advance();
     return;
   }
 
@@ -125,11 +127,12 @@ Chunk& Parser::currentChunk() {
 }
 
 void Parser::emitReturn() {
-  this->emitByte(OP_RETURN);
-#ifndef DEBUG_PRINT_CODE
-  if (!this->hadError) {
-    this->currentChunk().disassembleChunk("code");
+  emitByte(OP_RETURN);
+#ifdef DEBUG_PRINT_CODE
+  if (this->hadError) {
+    std::cout << "finished with errors\n";
   }
+  this->currentChunk().disassembleChunk();
 #endif
 }
 
@@ -148,11 +151,11 @@ void Parser::emitConstant(double value) {
 }
 
 void Parser::endCompiler() {
-  this->emitReturn();
+  emitReturn();
 }
 
 void Parser::number() {
-  double value = std::stod(this->previous.source);
+  double value = std::stod(this->previous.source.substr(previous.start, previous.length));
   this->emitConstant(value);
 }
 
@@ -199,24 +202,24 @@ void Parser::binary() {
 }
 
 void Parser::parsePrecedence(Precedence precedence) {
-  this->advance();
+  advance();
   ParseFn prefixRule = getRule(this->previous.type).getPrefix();
   if (prefixRule == NULL) {
-    this->error("Expect expression.");
+    error("Expect expression.");
     return;
   }
 
   (this->*prefixRule)();
 
-  while (precedence <= getRule(this->current.type).getPrecedence()) {
-    this->advance();
-    ParseFn infixRule = getRule(this->previous.type).getInfix();
+  while (precedence <= getRule(current.type).getPrecedence()) {
+    advance();
+    ParseFn infixRule = getRule(previous.type).getInfix();
     (this->*infixRule)();
   }
 }
 
 void Parser::expression() {
-  this->parsePrecedence(PREC_ASSIGNMENT);
+  parsePrecedence(PREC_ASSIGNMENT);
 }
 
 bool compile(std::string& source, Chunk& chunk) {
@@ -227,7 +230,7 @@ bool compile(std::string& source, Chunk& chunk) {
   parser.advance();
   parser.expression();
   parser.consume(TOKEN_EOF, "Expect end of expression");
-  
+  parser.endCompiler();
 
   return !parser.getHadError();
 }
