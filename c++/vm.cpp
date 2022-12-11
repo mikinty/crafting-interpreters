@@ -4,6 +4,10 @@
 #include <iostream>
 #include <cstdarg>
 
+static bool isFalsey(Value value) {
+  return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
 InterpretResult VM::run() {
 #define BINARY_OP(valueType, op) \
   do { \
@@ -68,6 +72,22 @@ InterpretResult VM::run() {
       case OP_FALSE:
         stack.push_back(BOOL_VAL(false));
         break;
+      case OP_NOT: {
+        auto backValue = stack.back();
+        stack.pop_back();
+        stack.push_back(BOOL_VAL(isFalsey(backValue)));
+        break;
+      }
+      case OP_EQUAL: {
+        Value b = stack.back();
+        stack.pop_back();
+        Value a = stack.back();
+        stack.pop_back();
+        stack.push_back(BOOL_VAL(valuesEqual(a, b)));
+        break;
+      }
+      case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
+      case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
       default:
         runtimeError("Unimplemented instruction in VM run()");
         return INTERPRET_RUNTIME_ERROR;

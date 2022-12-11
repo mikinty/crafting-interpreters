@@ -28,6 +28,16 @@ void printValue(Value value) {
   }
 }
 
+bool valuesEqual(Value a, Value b) {
+  if (a.type != b.type) return false;
+  switch (a.type) {
+    case VAL_BOOL:   return AS_BOOL(a) == AS_BOOL(b);
+    case VAL_NIL:    return true;
+    case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
+    default:         return false;
+  }
+}
+
 static int simpleInstruction(const std::string& name, int offset) {
   std::cout << name << "\n";
   return offset + 1;
@@ -59,6 +69,14 @@ int Chunk::disassembleInstruction(int offset) {
       return simpleInstruction("OP_TRUE", offset);
     case OP_FALSE:
       return simpleInstruction("OP_FALSE", offset);
+    case OP_EQUAL:
+      return simpleInstruction("OP_EQUAL", offset);
+    case OP_GREATER:
+      return simpleInstruction("OP_GREATER", offset);
+    case OP_LESS:
+      return simpleInstruction("OP_LESS", offset);
+    case OP_NOT:
+      return simpleInstruction("OP_NOT", offset);
     case OP_NEGATE:
       return simpleInstruction("OP_NEGATE", offset);
     case OP_ADD:

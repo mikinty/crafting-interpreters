@@ -7,46 +7,46 @@
 #include <fmt/core.h>
 
 std::map<TokenType, ParseRule> rules = {
-  {TOKEN_LEFT_PAREN, ParseRule(&Parser::grouping, NULL, PREC_NONE)},
-  {TOKEN_RIGHT_PAREN, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_LEFT_BRACE, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_RIGHT_BRACE, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_COMMA, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_DOT, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_MINUS, ParseRule(&Parser::unary, &Parser::binary, PREC_TERM)},
-  {TOKEN_PLUS, ParseRule(NULL, &Parser::binary, PREC_TERM)},
-  {TOKEN_SEMICOLON, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_SLASH, ParseRule(NULL, &Parser::binary, PREC_FACTOR)},
-  {TOKEN_STAR, ParseRule(NULL, &Parser::binary, PREC_FACTOR)},
-  {TOKEN_BANG, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_BANG_EQUAL, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_EQUAL, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_EQUAL_EQUAL, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_GREATER, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_GREATER_EQUAL, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_LESS, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_LESS_EQUAL, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_IDENTIFIER, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_STRING, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_NUMBER, ParseRule(&Parser::number, NULL, PREC_NONE)},
-  {TOKEN_AND, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_CLASS, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_ELSE, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_FALSE, ParseRule(&Parser::literal, NULL, PREC_NONE)},
-  {TOKEN_FOR, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_FUN, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_IF, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_NIL, ParseRule(&Parser::literal, NULL, PREC_NONE)},
-  {TOKEN_OR, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_PRINT, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_RETURN, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_SUPER, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_THIS, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_TRUE, ParseRule(&Parser::literal, NULL, PREC_NONE)},
-  {TOKEN_VAR, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_WHILE, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_ERROR, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_EOF, ParseRule(NULL, NULL, PREC_NONE)}
+  {TOKEN_LEFT_PAREN,    ParseRule(&Parser::grouping, NULL, PREC_NONE)},
+  {TOKEN_RIGHT_PAREN,   ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_LEFT_BRACE,    ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_RIGHT_BRACE,   ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_COMMA,         ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_DOT,           ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_MINUS,         ParseRule(&Parser::unary, &Parser::binary, PREC_TERM)},
+  {TOKEN_PLUS,          ParseRule(NULL, &Parser::binary, PREC_TERM)},
+  {TOKEN_SEMICOLON,     ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_SLASH,         ParseRule(NULL, &Parser::binary, PREC_FACTOR)},
+  {TOKEN_STAR,          ParseRule(NULL, &Parser::binary, PREC_FACTOR)},
+  {TOKEN_BANG,          ParseRule(&Parser::unary, NULL, PREC_NONE)},
+  {TOKEN_BANG_EQUAL,    ParseRule(NULL, &Parser::binary, PREC_EQUALITY)},
+  {TOKEN_EQUAL,         ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_EQUAL_EQUAL,   ParseRule(NULL, &Parser::binary, PREC_EQUALITY)},
+  {TOKEN_GREATER,       ParseRule(NULL, &Parser::binary, PREC_COMPARISON)},
+  {TOKEN_GREATER_EQUAL, ParseRule(NULL, &Parser::binary, PREC_COMPARISON)},
+  {TOKEN_LESS,          ParseRule(NULL, &Parser::binary, PREC_COMPARISON)},
+  {TOKEN_LESS_EQUAL,    ParseRule(NULL, &Parser::binary, PREC_COMPARISON)},
+  {TOKEN_IDENTIFIER,    ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_STRING,        ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_NUMBER,        ParseRule(&Parser::number, NULL, PREC_NONE)},
+  {TOKEN_AND,           ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_CLASS,         ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_ELSE,          ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_FALSE,         ParseRule(&Parser::literal, NULL, PREC_NONE)},
+  {TOKEN_FOR,           ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_FUN,           ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_IF,            ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_NIL,           ParseRule(&Parser::literal, NULL, PREC_NONE)},
+  {TOKEN_OR,            ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_PRINT,         ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_RETURN,        ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_SUPER,         ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_THIS,          ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_TRUE,          ParseRule(&Parser::literal, NULL, PREC_NONE)},
+  {TOKEN_VAR,           ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_WHILE,         ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_ERROR,         ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_EOF,           ParseRule(NULL, NULL, PREC_NONE)}
 };
 
 /*** ParseRule Implementation ***/
@@ -172,6 +172,9 @@ void Parser::unary() {
 
   // Emit the operator instruction
   switch(operatorType) {
+    case TOKEN_BANG:
+      emitByte(OP_NOT);
+      break;
     case TOKEN_MINUS:
       emitByte(OP_NEGATE);
       break;
@@ -191,10 +194,16 @@ void Parser::binary() {
   parsePrecedence((Precedence)(rule.getPrecedence() + 1));
 
   switch (operatorType) {
-    case TOKEN_PLUS:  emitByte(OP_ADD); break;
-    case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
-    case TOKEN_STAR:  emitByte(OP_MULTIPLY); break;
-    case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
+    case TOKEN_BANG_EQUAL:    emitBytes(OP_EQUAL, OP_NOT); break;
+    case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL); break;
+    case TOKEN_GREATER:       emitByte(OP_GREATER); break;
+    case TOKEN_GREATER_EQUAL: emitBytes(OP_LESS, OP_NOT); break;
+    case TOKEN_LESS:          emitByte(OP_LESS); break;
+    case TOKEN_LESS_EQUAL:    emitBytes(OP_GREATER, OP_NOT); break;
+    case TOKEN_PLUS:          emitByte(OP_ADD); break;
+    case TOKEN_MINUS:         emitByte(OP_SUBTRACT); break;
+    case TOKEN_STAR:          emitByte(OP_MULTIPLY); break;
+    case TOKEN_SLASH:         emitByte(OP_DIVIDE); break;
     default:
       error("This should not be reachable in binary operator types");
       return;

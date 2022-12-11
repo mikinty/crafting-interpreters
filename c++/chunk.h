@@ -10,10 +10,14 @@ enum OpCode {
   OP_NIL,
   OP_TRUE,
   OP_FALSE,
+  OP_EQUAL,
+  OP_GREATER,
+  OP_LESS,
   OP_ADD,
   OP_SUBTRACT,
   OP_MULTIPLY,
   OP_DIVIDE,
+  OP_NOT,
   OP_NEGATE,
   OP_RETURN,
 };
@@ -31,6 +35,8 @@ typedef struct {
     double number;
   } as;
 } Value;
+
+bool valuesEqual(Value a, Value b);
 
 #define IS_BOOL(value) ((value).type == VAL_BOOL)
 #define IS_NIL(value) ((value).type == VAL_NIL)
