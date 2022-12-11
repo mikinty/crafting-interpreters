@@ -106,7 +106,7 @@ Token Scanner::identifier() {
   return makeToken(identifierType());
 }
 
-TokenType Scanner::checkKeyword(int start, int length, const std::string& rest, TokenType type) {
+TokenType Scanner::checkKeyword(size_t start, size_t length, const std::string& rest, TokenType type) {
   return (source.substr(start, length) == rest) ? type : TOKEN_IDENTIFIER;
 }
 

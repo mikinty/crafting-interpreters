@@ -54,6 +54,7 @@ public:
   void unary();
   void binary();
   void parsePrecedence(Precedence precedence);
+  void literal();
 };
 
 using ParseFn = void (Parser::*)();

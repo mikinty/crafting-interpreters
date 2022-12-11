@@ -59,9 +59,23 @@ InterpretResult VM::run() {
           std::cout << "\n";
           return INTERPRET_OK;
         }
+      case OP_NIL:
+        stack.push_back(NIL_VAL);
+        break;        
+      case OP_TRUE:
+        stack.push_back(BOOL_VAL(true));
+        break;        
+      case OP_FALSE:
+        stack.push_back(BOOL_VAL(false));
+        break;
+      default:
+        runtimeError("Unimplemented instruction in VM run()");
+        return INTERPRET_RUNTIME_ERROR;
     }
   }
 #undef BINARY_OP
+  runtimeError("Unreachable code at the end of VM run()");
+  return INTERPRET_RUNTIME_ERROR;
 }
 
 InterpretResult VM::interpret(std::string& source) {

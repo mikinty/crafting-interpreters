@@ -28,11 +28,11 @@ typedef enum {
 class Token {
   public:
     TokenType type;
-    int start;
-    int length;
-    int line;
+    size_t start;
+    size_t length;
+    size_t line;
     std::string source;
-    Token(TokenType type, int start, int length, int line, const std::string& source) {
+    Token(TokenType type, size_t start, size_t length, size_t line, const std::string& source) {
       this->type = type;
       this->start = start;
       this->length = length;
@@ -44,9 +44,9 @@ class Token {
 class Scanner {
   private:
     std::string source;
-    int start;
-    int current;
-    int line;
+    size_t start;
+    size_t current;
+    size_t line;
     bool isAtEnd();
     bool match(char expected);
     void skipWhitespace();
@@ -56,7 +56,7 @@ class Scanner {
     Token number();
     Token identifier();
     TokenType identifierType();
-    TokenType checkKeyword(int start, int length, const std::string& rest, TokenType type);
+    TokenType checkKeyword(size_t start, size_t length, const std::string& rest, TokenType type);
 
   public:
     Scanner(const std::string& source);

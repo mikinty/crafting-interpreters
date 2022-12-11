@@ -15,7 +15,17 @@ void Chunk::freeChunk() {
 
 // DEBUG: Printing instructions
 void printValue(Value value) {
-  fmt::printf("%g", AS_NUMBER(value));
+  switch (value.type) {
+    case VAL_BOOL:
+      fmt::printf(AS_BOOL(value) ? "true" : "false");
+      break;
+    case VAL_NIL:
+      fmt::printf("nil");
+      break;
+    case VAL_NUMBER:
+      fmt::printf("%g", AS_NUMBER(value));
+      break;
+  }
 }
 
 static int simpleInstruction(const std::string& name, int offset) {
@@ -43,25 +53,24 @@ int Chunk::disassembleInstruction(int offset) {
   switch (instruction) {
     case OP_CONSTANT:
       return constantInstruction("OP_CONSTANT", offset);
-      break;
+    case OP_NIL:
+      return simpleInstruction("OP_NIL", offset);
+    case OP_TRUE:
+      return simpleInstruction("OP_TRUE", offset);
+    case OP_FALSE:
+      return simpleInstruction("OP_FALSE", offset);
     case OP_NEGATE:
       return simpleInstruction("OP_NEGATE", offset);
-      break;
     case OP_ADD:
       return simpleInstruction("OP_ADD", offset);
-      break;
     case OP_SUBTRACT:
       return simpleInstruction("OP_SUBTRACT", offset);
-      break;
     case OP_MULTIPLY:
       return simpleInstruction("OP_MULTIPLY", offset);
-      break;
     case OP_DIVIDE:
       return simpleInstruction("OP_DIVIDE", offset);
-      break;
     case OP_RETURN:
       return simpleInstruction("OP_RETURN", offset);
-      break;
     default:
       std::cout << fmt::format("Unknown opcode {}\n", instruction);
       return offset + 1;
@@ -69,7 +78,7 @@ int Chunk::disassembleInstruction(int offset) {
 }
 
 void Chunk::disassembleChunk() {
-  for (int offset = 0; offset < code.size();) {
+  for (size_t offset = 0; offset < code.size();) {
     offset = disassembleInstruction(offset);
   }
 }

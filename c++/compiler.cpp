@@ -32,17 +32,17 @@ std::map<TokenType, ParseRule> rules = {
   {TOKEN_AND, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_CLASS, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_ELSE, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_FALSE, ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_FALSE, ParseRule(&Parser::literal, NULL, PREC_NONE)},
   {TOKEN_FOR, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_FUN, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_IF, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_NIL, ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_NIL, ParseRule(&Parser::literal, NULL, PREC_NONE)},
   {TOKEN_OR, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_PRINT, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_RETURN, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_SUPER, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_THIS, ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_TRUE, ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_TRUE, ParseRule(&Parser::literal, NULL, PREC_NONE)},
   {TOKEN_VAR, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_WHILE, ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_ERROR, ParseRule(NULL, NULL, PREC_NONE)},
@@ -86,7 +86,7 @@ void Parser::errorAt(Token& token, const std::string& message) {
   if (panicMode) return;
   panicMode = true;
 
-  std::fprintf(stderr, "[line %d] Error", token.line);
+  std::fprintf(stderr, "[line %zu] Error", token.line);
 
   if (token.type == TOKEN_EOF) {
     std::fprintf(stderr, " at end");
@@ -197,6 +197,17 @@ void Parser::binary() {
     case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
     default:
       error("This should not be reachable in binary operator types");
+      return;
+  }
+}
+
+void Parser::literal() {
+  switch (previous.type) {
+    case TOKEN_FALSE: emitByte(OP_FALSE); break;
+    case TOKEN_TRUE: emitByte(OP_TRUE); break;
+    case TOKEN_NIL: emitByte(OP_NIL); break;
+    default: 
+      error("This should not be reachable in literal types");
       return;
   }
 }
