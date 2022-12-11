@@ -47,7 +47,7 @@ public:
   void emitByte(uint8_t byte);
   void emitBytes(uint8_t byte1, uint8_t byte2);
   void emitReturn();
-  void emitConstant(double value);
+  void emitConstant(Value value);
   void endCompiler();
   void number();
   void grouping();

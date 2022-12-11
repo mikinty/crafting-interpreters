@@ -2,13 +2,18 @@
 #include "chunk.h"
 #include "compiler.h"
 #include <iostream>
+#include <cstdarg>
 
 InterpretResult VM::run() {
-#define BINARY_OP(op) \
+#define BINARY_OP(valueType, op) \
   do { \
-    Value b = stack.back();\
+    if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
+      runtimeError("Operands must be numbers."); \
+      return INTERPRET_RUNTIME_ERROR; \
+    } \
+    double b = AS_NUMBER(stack.back());\
     stack.pop_back();\
-    stack.back() = stack.back() op b;\
+    stack.back() = valueType(AS_NUMBER(stack.back()) op b);\
   } while (false)
 
   ip = 0;
@@ -32,14 +37,20 @@ InterpretResult VM::run() {
           break;
         }
       case OP_NEGATE:
-        {
-          stack.back() = -stack.back();
-          break;
+        if (!IS_NUMBER(peek(0))) {
+          runtimeError("Operand must be a number.");
+          return INTERPRET_RUNTIME_ERROR;
         }
-      case OP_ADD: BINARY_OP(+); break;
-      case OP_SUBTRACT: BINARY_OP(-); break;
-      case OP_MULTIPLY: BINARY_OP(*); break;
-      case OP_DIVIDE: BINARY_OP(/); break;
+        {
+          auto backValue = stack.back();
+          stack.pop_back();
+          stack.push_back(NUMBER_VAL(-AS_NUMBER(backValue)));
+        }
+        break;
+      case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
+      case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
+      case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+      case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;
       case OP_RETURN:
         {
           Value backValue = stack.back();
@@ -64,4 +75,21 @@ InterpretResult VM::interpret(std::string& source) {
   ip = 0;
 
   return run();
+}
+
+Value VM::peek(int distance) {
+  return stack[stack.size() - 1 - distance];
+}
+
+void VM::runtimeError(const char* format, ...) {
+  va_list args;  
+  va_start(args, format);
+  std::vfprintf(stderr, format, args);
+  va_end(args);
+  std::fputs("\n", stderr);
+
+  auto instruction = ip - chunk.code.size() - 1;
+  auto line = chunk.getLines()[instruction];
+  std::fprintf(stderr, "[line %d] in script\n", line);
+  // resetStack();
 }

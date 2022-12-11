@@ -146,7 +146,7 @@ uint8_t Parser::makeConstant(Value value) {
   return (uint8_t)constant;
 }
 
-void Parser::emitConstant(double value) {
+void Parser::emitConstant(Value value) {
   emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
@@ -156,7 +156,7 @@ void Parser::endCompiler() {
 
 void Parser::number() {
   double value = std::stod(previous.source.substr(previous.start, previous.length));
-  emitConstant(value);
+  emitConstant(NUMBER_VAL(value));
 }
 
 void Parser::grouping() {

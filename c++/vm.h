@@ -19,6 +19,8 @@ class VM {
 
   public:
     InterpretResult interpret(std::string& source);
+    Value peek(int distance);
+    void runtimeError(const char* format, ...);
 };
 
 #endif

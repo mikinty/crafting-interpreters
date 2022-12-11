@@ -15,7 +15,7 @@ void Chunk::freeChunk() {
 
 // DEBUG: Printing instructions
 void printValue(Value value) {
-  fmt::printf("%g", value);
+  fmt::printf("%g", AS_NUMBER(value));
 }
 
 static int simpleInstruction(const std::string& name, int offset) {
@@ -81,4 +81,8 @@ void Chunk::disassembleChunk() {
 int Chunk::addConstant(Value value) {
   constants.push_back(value);
   return constants.size() - 1;
+}
+
+std::vector<int>& Chunk::getLines() {
+  return lines;
 }
