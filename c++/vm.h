@@ -4,6 +4,7 @@
 #include "chunk.h"
 #include "memory.h"
 #include <vector>
+#include <map>
 
 typedef enum
 {
@@ -34,6 +35,9 @@ private:
 public:
   // For garbage collection
   Obj *objects;
+
+  // String interning
+  std::map<uint32_t, ObjString*> strings;
 
   InterpretResult interpret(std::string &source);
   Value peek(int distance);

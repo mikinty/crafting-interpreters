@@ -30,11 +30,22 @@ static ObjString* allocateString(char* chars, int length, uint32_t hash) {
   str->length = length;
   str->chars = chars;
   str->hash = hash;
+
+  auto vm = VM::GetInstance();
+  vm->strings.insert(std::pair<uint32_t, ObjString*>(hash, str));
+
   return str;
 }
 
 ObjString* copyString(const char* chars, int length) {
   uint32_t hash = hashString(chars, length);
+
+  auto vm = VM::GetInstance();
+  auto search = vm->strings.find(hash);
+  if (search != vm->strings.end()) {
+    return vm->strings[hash];
+  }
+
   char* heapChars = ALLOCATE(char, length + 1);
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
@@ -51,5 +62,13 @@ void printObject(Value value) {
 
 ObjString* takeString(char* chars, int length) {
   uint32_t hash = hashString(chars, length);
+
+  auto vm = VM::GetInstance();
+  auto search = vm->strings.find(hash);
+  if (search != vm->strings.end()) {
+    FREE_ARRAY(char, chars, length + 1);
+    return vm->strings[hash];
+  }
+  
   return allocateString(chars, length, hash);
 }
