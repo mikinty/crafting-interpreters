@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-static void repl(VM& vm) {
+static void repl(VM* vm) {
   std::string line;
 
   for (;;) {
@@ -13,7 +13,7 @@ static void repl(VM& vm) {
       std::cout << std::endl;
       break;
     }
-    vm.interpret(line);
+    vm->interpret(line);
   }
 }
 
@@ -24,16 +24,16 @@ static std::string readFile(const std::string& path) {
   return buffer.str();
 }
 
-static void runFile(VM& vm, const std::string& path) {
+static void runFile(VM* vm, const std::string& path) {
   std::string source = readFile(path);
-  InterpretResult result = vm.interpret(source);
+  InterpretResult result = vm->interpret(source);
 
   if (result == INTERPRET_COMPILE_ERROR) exit(65);
   if (result == INTERPRET_RUNTIME_ERROR) exit(70);
 }
 
 int main(int argc, const char* argv[]) {
-  VM vm;
+  auto vm = VM::GetInstance();
 
   if (argc == 1) {
     repl(vm);

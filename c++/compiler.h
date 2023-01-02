@@ -2,6 +2,7 @@
 #define clox_compiler_h
 
 #include <string>
+#include "object.h"
 #include "vm.h"
 #include "scanner.h"
 #include "chunk.h"
@@ -50,6 +51,7 @@ public:
   void emitConstant(Value value);
   void endCompiler();
   void number();
+  void string();
   void grouping();
   void unary();
   void binary();

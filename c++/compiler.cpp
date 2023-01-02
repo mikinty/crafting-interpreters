@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <fmt/core.h>
+#include "object.h"
 
 std::map<TokenType, ParseRule> rules = {
   {TOKEN_LEFT_PAREN,    ParseRule(&Parser::grouping, NULL, PREC_NONE)},
@@ -27,7 +28,7 @@ std::map<TokenType, ParseRule> rules = {
   {TOKEN_LESS,          ParseRule(NULL, &Parser::binary, PREC_COMPARISON)},
   {TOKEN_LESS_EQUAL,    ParseRule(NULL, &Parser::binary, PREC_COMPARISON)},
   {TOKEN_IDENTIFIER,    ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_STRING,        ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_STRING,        ParseRule(&Parser::string, NULL, PREC_NONE)},
   {TOKEN_NUMBER,        ParseRule(&Parser::number, NULL, PREC_NONE)},
   {TOKEN_AND,           ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_CLASS,         ParseRule(NULL, NULL, PREC_NONE)},
@@ -157,6 +158,10 @@ void Parser::endCompiler() {
 void Parser::number() {
   double value = std::stod(previous.source.substr(previous.start, previous.length));
   emitConstant(NUMBER_VAL(value));
+}
+
+void Parser::string() {
+  emitConstant(OBJ_VAL(copyString(previous.source.substr(previous.start+1, previous.length-2).c_str(), previous.length - 2)));
 }
 
 void Parser::grouping() {
