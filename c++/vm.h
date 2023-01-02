@@ -60,22 +60,4 @@ public:
   }
 };
 
-VM *VM::vm_ = nullptr;
-
-/**
- * Static methods should be defined outside the class.
- */
-VM *VM::GetInstance()
-{
-  /**
-   * This is a safer way to create an instance. instance = new Singleton is
-   * dangerous in case two instance threads wants to access at the same time
-   */
-  if (vm_ == nullptr)
-  {
-    vm_ = new VM();
-  }
-  return vm_;
-}
-
 #endif
