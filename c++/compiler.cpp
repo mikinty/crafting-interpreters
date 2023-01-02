@@ -247,14 +247,43 @@ void Parser::expression() {
   parsePrecedence(PREC_ASSIGNMENT);
 }
 
+void Parser::printStatement() {
+  expression();
+  consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+  emitByte(OP_PRINT);
+}
+
+void Parser::declaration() {
+  statement();
+}
+
+void Parser::statement() {
+  if (match(TOKEN_PRINT)) {
+    printStatement();
+  }
+}
+
+bool Parser::match(TokenType type) {
+  if (!check(type)) return false;
+  advance();
+  return true;
+}
+
+bool Parser::check(TokenType type) {
+  return current.type == type;
+}
+
 bool compile(std::string& source, Chunk& chunk) {
   Scanner scanner(source);
   auto current = Token(TOKEN_EOF, 0, 0, 0, source);
   auto previous = Token(TOKEN_EOF, 0, 0, 0, source);
   Parser parser(current, previous, scanner, chunk);
   parser.advance();
-  parser.expression();
-  parser.consume(TOKEN_EOF, "Expect end of expression");
+
+  while (!parser.match(TOKEN_EOF)) {
+    parser.declaration();
+  }
+
   parser.endCompiler();
 
   return !parser.getHadError();

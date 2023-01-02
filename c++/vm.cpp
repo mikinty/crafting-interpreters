@@ -83,14 +83,6 @@ InterpretResult VM::run() {
       case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
       case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
       case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;
-      case OP_RETURN:
-        {
-          Value backValue = stack.back();
-          stack.pop_back();
-          printValue(backValue);
-          std::cout << "\n";
-          return INTERPRET_OK;
-        }
       case OP_NIL:
         stack.push_back(NIL_VAL);
         break;        
@@ -116,6 +108,17 @@ InterpretResult VM::run() {
       }
       case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
       case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
+      case OP_PRINT: {
+        printValue(stack.back());
+        stack.pop_back();
+        printf("\n");
+        break;
+      }
+      case OP_RETURN:
+        {
+          // Exit interpreter
+          return INTERPRET_OK;
+        }
       default:
         runtimeError("Unimplemented instruction in VM run()");
         return INTERPRET_RUNTIME_ERROR;

@@ -92,6 +92,8 @@ int Chunk::disassembleInstruction(int offset) {
       return simpleInstruction("OP_MULTIPLY", offset);
     case OP_DIVIDE:
       return simpleInstruction("OP_DIVIDE", offset);
+    case OP_PRINT:
+      return simpleInstruction("OP_PRINT", offset);
     case OP_RETURN:
       return simpleInstruction("OP_RETURN", offset);
     default:

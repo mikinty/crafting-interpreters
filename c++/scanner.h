@@ -48,7 +48,6 @@ class Scanner {
     size_t current;
     size_t line;
     bool isAtEnd();
-    bool match(char expected);
     void skipWhitespace();
     char peek();
     char peekNext();
@@ -64,6 +63,7 @@ class Scanner {
     Token scanToken();
     Token makeToken(TokenType type);
     Token errorToken(const std::string& message);
+    bool match(char expected);
 };
 
 #endif

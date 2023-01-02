@@ -57,6 +57,11 @@ public:
   void binary();
   void parsePrecedence(Precedence precedence);
   void literal();
+  void declaration();
+  void statement();
+  bool match(TokenType type);
+  bool check(TokenType type);
+  void printStatement();
 };
 
 using ParseFn = void (Parser::*)();
