@@ -50,21 +50,29 @@ public:
   void emitReturn();
   void emitConstant(Value value);
   void endCompiler();
-  void number();
-  void string();
-  void grouping();
-  void unary();
-  void binary();
+  void number(bool canAssign);
+  void string(bool canAssign);
+  void grouping(bool canAssign);
+  void unary(bool canAssign);
+  void binary(bool canAssign);
   void parsePrecedence(Precedence precedence);
-  void literal();
+  void literal(bool canAssign);
   void declaration();
   void statement();
   bool match(TokenType type);
   bool check(TokenType type);
   void printStatement();
+  void expressionStatement();
+  void synchronize();
+  void varDeclaration();
+  uint8_t parseVariable(const char* errorMessage);
+  uint8_t identifierConstant(Token *name);
+  void defineVariable(uint8_t global);
+  void variable(bool canAssign);
+  void namedVariable(Token name, bool canAssign);
 };
 
-using ParseFn = void (Parser::*)();
+using ParseFn = void (Parser::*)(bool canAssign);
 
 class ParseRule
 {

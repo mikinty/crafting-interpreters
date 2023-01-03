@@ -27,6 +27,8 @@ void VM::concatenate() {
 }
 
 InterpretResult VM::run() {
+#define READ_CONSTANT() (chunk.constants[chunk.code[ip++]])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
   do { \
     if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -38,6 +40,7 @@ InterpretResult VM::run() {
     stack.back() = valueType(AS_NUMBER(stack.back()) op b);\
   } while (false)
 
+  auto vm = VM::GetInstance();
   ip = 0;
   while (ip < chunk.code.size()) {
     #ifdef DEBUG_TRACE_EXECUTION
@@ -54,7 +57,7 @@ InterpretResult VM::run() {
     switch (instruction) {
       case OP_CONSTANT:
         {
-          Value constant = chunk.constants[chunk.code[ip++]];
+          Value constant = READ_CONSTANT();
           stack.push_back(constant);
           break;
         }
@@ -98,6 +101,32 @@ InterpretResult VM::run() {
         stack.push_back(BOOL_VAL(isFalsey(backValue)));
         break;
       }
+      case OP_POP: {
+        stack.pop_back(); 
+        break;
+      }
+      case OP_GET_GLOBAL: {
+        ObjString* name = READ_STRING();
+        if (vm->globals.find(name) == vm->globals.end()) {
+          runtimeError("Undefined variable '%s'.", name->chars);
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        stack.push_back(vm->globals[name]);
+        break;
+      }
+      case OP_DEFINE_GLOBAL: {
+        ObjString* name = READ_STRING();
+        vm->globals[name] = peek(0);
+      }
+      case OP_SET_GLOBAL: {
+        ObjString* name = READ_STRING();
+        if (vm->globals.find(name) == vm->globals.end()) {
+          runtimeError("Undefined variable '%s'.", name->chars);
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+      }
       case OP_EQUAL: {
         Value b = stack.back();
         stack.pop_back();
@@ -124,6 +153,8 @@ InterpretResult VM::run() {
         return INTERPRET_RUNTIME_ERROR;
     }
   }
+#undef READ_CONSTANT
+#undef READ_STRING
 #undef BINARY_OP
   runtimeError("Unreachable code at the end of VM run()");
   return INTERPRET_RUNTIME_ERROR;

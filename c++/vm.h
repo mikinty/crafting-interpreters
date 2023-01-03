@@ -38,6 +38,7 @@ public:
 
   // String interning
   std::map<uint32_t, ObjString*> strings;
+  std::map<ObjString*, Value> globals;
 
   InterpretResult interpret(std::string &source);
   Value peek(int distance);
