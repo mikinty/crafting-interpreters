@@ -32,6 +32,13 @@ class Token {
     size_t length;
     size_t line;
     std::string source;
+    Token() {
+      this->type = TOKEN_ERROR;
+      this->start = 0;
+      this->length = 0;
+      this->line = 0;
+      this->source = "";
+    }
     Token(TokenType type, size_t start, size_t length, size_t line, const std::string& source) {
       this->type = type;
       this->start = start;

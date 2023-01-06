@@ -24,6 +24,8 @@ typedef enum
 
 bool compile(std::string &source, Chunk &chunk);
 
+class Compiler;
+
 class Parser
 {
 private:
@@ -42,7 +44,7 @@ public:
   void expression();
   void consume(const TokenType type, const std::string &message);
   void errorAtCurrent(const std::string &message);
-  void error(const std::string& message);
+  void error(const std::string &message);
   void errorAt(Token &token, const std::string &message);
   bool getHadError();
   void emitByte(uint8_t byte);
@@ -65,11 +67,17 @@ public:
   void expressionStatement();
   void synchronize();
   void varDeclaration();
-  uint8_t parseVariable(const char* errorMessage);
+  uint8_t parseVariable(const char *errorMessage);
   uint8_t identifierConstant(Token *name);
   void defineVariable(uint8_t global);
   void variable(bool canAssign);
   void namedVariable(Token name, bool canAssign);
+  void block();
+  void declareVariable();
+  void addLocal(Token name);
+  bool identifiersEqual(Token a, Token b);
+  int resolveLocal(Compiler* compiler, Token* name);
+  void markInitialized();
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);
@@ -87,6 +95,43 @@ public:
   Precedence getPrecedence();
   ParseFn getPrefix();
   ParseFn getInfix();
+};
+
+class Local
+{
+public:
+  Token name;
+  int depth;
+  Local() {
+    name = Token(TOKEN_ERROR, 0, 0, 0, "");
+    depth = -1;
+  }
+};
+
+class Compiler
+{
+private:
+  Local locals[UINT8_COUNT];
+  int localCount;
+  int scopeDepth;
+  Compiler(int localCount, int scopeDepth) {
+    this->localCount = localCount;
+    this->scopeDepth = scopeDepth;
+  }
+  static Compiler *compiler_;
+
+public:
+  Compiler(Compiler &other) = delete;
+  void operator=(const Compiler &) = delete;
+  static Compiler *GetInstance();
+  ~Compiler() {}
+  void beginScope();
+  void endScope(Parser* parser);
+  int getScopeDepth();
+  int getLocalCount();
+  void incLocalCount();
+  void decLocalCount();
+  Local* getLocals();
 };
 
 #endif

@@ -27,6 +27,7 @@ void VM::concatenate() {
 }
 
 InterpretResult VM::run() {
+#define READ_BYTE() (chunk.code[ip++])
 #define READ_CONSTANT() (chunk.constants[chunk.code[ip++]])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
@@ -103,6 +104,16 @@ InterpretResult VM::run() {
       }
       case OP_POP: {
         stack.pop_back(); 
+        break;
+      }
+      case OP_GET_LOCAL: {
+        uint8_t slot = READ_BYTE();
+        vm->stack.push_back(vm->stack[slot]);
+        break;
+      }
+      case OP_SET_LOCAL: {
+        uint8_t slot = READ_BYTE();
+        vm->stack[slot] = peek(0);
         break;
       }
       case OP_GET_GLOBAL: {

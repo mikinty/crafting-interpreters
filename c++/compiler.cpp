@@ -7,6 +7,49 @@
 #include <fmt/core.h>
 #include "object.h"
 
+Compiler *Compiler::compiler_ = nullptr;
+
+Compiler *Compiler::GetInstance()
+{
+  if (compiler_ == nullptr)
+  {
+    compiler_ = new Compiler(0, 0);
+  }
+  return compiler_;
+}
+void Compiler::beginScope() {
+  scopeDepth++;
+}
+
+void Compiler::endScope(Parser* parser) {
+  scopeDepth--;
+
+  while (localCount > 0 && locals[localCount-1].depth > scopeDepth) {
+    parser->emitByte(OP_POP);
+    localCount--;
+  }
+}
+
+int Compiler::getScopeDepth() {
+  return scopeDepth;
+}
+
+int Compiler::getLocalCount() {
+  return localCount;
+}
+
+void Compiler::incLocalCount() {
+  localCount++;
+}
+
+void Compiler::decLocalCount() {
+  localCount--;
+}
+
+Local* Compiler::getLocals() {
+  return locals;
+}
+
 std::map<TokenType, ParseRule> rules = {
   {TOKEN_LEFT_PAREN,    ParseRule(&Parser::grouping, NULL, PREC_NONE)},
   {TOKEN_RIGHT_PAREN,   ParseRule(NULL, NULL, PREC_NONE)},
@@ -169,13 +212,23 @@ void Parser::variable(bool canAssign) {
 }
 
 void Parser::namedVariable(Token name, bool canAssign) {
-  uint8_t arg = identifierConstant(&name);
+  uint8_t getOp, setOp;
+  Compiler* compiler = Compiler::GetInstance();
+  int arg = resolveLocal(compiler, &name);
+  if (arg != -1) {
+    getOp = OP_GET_LOCAL;
+    setOp = OP_SET_LOCAL;
+  } else {
+    arg = identifierConstant(&name);
+    getOp = OP_GET_GLOBAL;
+    setOp = OP_SET_GLOBAL;
+  }
 
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    emitBytes(OP_SET_GLOBAL, arg);
+    emitBytes(setOp, arg);
   } else {
-    emitBytes(OP_GET_GLOBAL, arg);
+    emitBytes(getOp, arg);
   }
 }
 
@@ -267,6 +320,14 @@ void Parser::expression() {
   parsePrecedence(PREC_ASSIGNMENT);
 }
 
+void Parser::block() {
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    declaration();
+  }
+
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
 void Parser::expressionStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after value.");
@@ -318,14 +379,78 @@ void Parser::varDeclaration() {
 
 uint8_t Parser::parseVariable(const char* errorMessage) {
   consume(TOKEN_IDENTIFIER, errorMessage);
+
+  Compiler* compiler = Compiler::GetInstance();
+  declareVariable();
+  if (compiler->getScopeDepth() > 0) return 0;
+
   return identifierConstant(&previous);
+}
+
+void Parser::markInitialized() {
+  Compiler* compiler = Compiler::GetInstance();
+  compiler->getLocals()[compiler->getLocalCount() - 1].depth = compiler->getScopeDepth();
 }
 
 uint8_t Parser::identifierConstant(Token *name) {
   return makeConstant(OBJ_VAL(copyString(name->source.c_str(), name->length)));
 }
 
+bool Parser::identifiersEqual(Token a, Token b) {
+  if (a.length != b.length) return false;
+  return a.source == b.source;
+}
+
+int Parser::resolveLocal(Compiler* compiler, Token* name) {
+  for (int i = compiler->getLocalCount() - 1; i >=0; i--) {
+    Local* local = &compiler->getLocals()[i];
+    if (identifiersEqual(*name, local->name)) {
+      if (local->depth == -1) {
+        error("Can't read local variable in its own initializer.");
+      }
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+void Parser::declareVariable() {
+  Compiler* compiler = Compiler::GetInstance();
+  if (compiler->getScopeDepth() == 0) return;
+
+  for (int i = compiler->getLocalCount() - 1; i >= 0; i--) {
+    Local* local = &compiler->getLocals()[i];
+    if (local->depth != -1 && local->depth < compiler->getScopeDepth()) {
+      break;
+    }
+
+    if (identifiersEqual(previous, local->name)) {
+      error(fmt::format("Already a variable with name '{}' in this scope.", previous.source));
+    }
+  }
+  addLocal(previous);
+}
+
+void Parser::addLocal(Token name) {
+  Compiler* compiler = Compiler::GetInstance();
+  if (compiler->getLocalCount() == UINT8_COUNT) {
+    error("Too many local variables in function.");
+    return;
+  }
+
+  Local* local = &compiler->getLocals()[compiler->getLocalCount()];
+  local->name = name;
+  local->depth = -1;
+}
+
 void Parser::defineVariable(uint8_t global) {
+  Compiler* compiler = Compiler::GetInstance();
+  if (compiler->getScopeDepth() > 0) {
+    markInitialized();
+    return;
+  }
+  
   emitBytes(OP_DEFINE_GLOBAL, global);
 }
 
@@ -342,6 +467,11 @@ void Parser::declaration() {
 void Parser::statement() {
   if (match(TOKEN_PRINT)) {
     printStatement();
+  } else if (match(TOKEN_LEFT_BRACE)) {
+    Compiler* compiler = Compiler::GetInstance();
+    compiler->beginScope();
+    block();
+    compiler->endScope(this);
   } else {
     expressionStatement();
   }

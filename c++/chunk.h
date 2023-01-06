@@ -12,8 +12,10 @@ enum OpCode {
   OP_FALSE,
   OP_POP,
   OP_GET_GLOBAL,
+  OP_GET_LOCAL,
   OP_DEFINE_GLOBAL,
   OP_SET_GLOBAL,
+  OP_SET_LOCAL,
   OP_EQUAL,
   OP_GREATER,
   OP_LESS,
@@ -65,8 +67,8 @@ class Chunk {
 private:
   std::vector<int> lines;
   int offset = 0;
-
   int constantInstruction(const std::string& name, int offset);
+  int byteInstruction(const std::string& name, int offset);
 
 public:
   std::vector<Value> constants;
