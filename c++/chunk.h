@@ -26,6 +26,8 @@ enum OpCode {
   OP_NOT,
   OP_NEGATE,
   OP_PRINT,
+  OP_JUMP,
+  OP_JUMP_IF_FALSE,
   OP_RETURN,
 };
 
@@ -69,6 +71,7 @@ private:
   int offset = 0;
   int constantInstruction(const std::string& name, int offset);
   int byteInstruction(const std::string& name, int offset);
+  int jumpInstruction(const std::string& name, int sign, int offset);
 
 public:
   std::vector<Value> constants;

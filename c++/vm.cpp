@@ -29,6 +29,8 @@ void VM::concatenate() {
 InterpretResult VM::run() {
 #define READ_BYTE() (chunk.code[ip++])
 #define READ_CONSTANT() (chunk.constants[chunk.code[ip++]])
+// TODO: no idea what this READ_SHORT is doing with the ip, it probably doesn't work. I tried to have it mask into a 16-bit int.
+#define READ_SHORT() (ip += 2, (uint16_t)((chunk.code[ip-2] << 8) | chunk.code[ip-1]))
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
   do { \
@@ -154,6 +156,18 @@ InterpretResult VM::run() {
         printf("\n");
         break;
       }
+      case OP_JUMP: {
+        uint16_t offset = READ_SHORT();
+        ip += offset;
+        break;
+      }
+      case OP_JUMP_IF_FALSE: {
+        uint16_t offset = READ_SHORT();
+        if (isFalsey(peek(0))) {
+          ip += offset;
+        }
+        break;
+      }
       case OP_RETURN:
         {
           // Exit interpreter
@@ -166,6 +180,7 @@ InterpretResult VM::run() {
   }
 #undef READ_CONSTANT
 #undef READ_STRING
+#undef READ_SHORT
 #undef BINARY_OP
   runtimeError("Unreachable code at the end of VM run()");
   return INTERPRET_RUNTIME_ERROR;

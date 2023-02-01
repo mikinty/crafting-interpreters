@@ -54,6 +54,13 @@ int Chunk::byteInstruction(const std::string& name, int offset) {
   return offset + 2;
 }
 
+int Chunk::jumpInstruction(const std::string& name, int sign, int offset) {
+  uint16_t jump = (uint16_t)(code[offset+1]<<8);
+  jump |= code[offset+2];
+  fmt::printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign*jump);
+  return offset + 3;
+}
+
 int Chunk::constantInstruction(const std::string& name, int offset) {
   uint8_t constantIndex = code[offset + 1];
   fmt::printf("%-16s %4d '", name.c_str(), constantIndex);
@@ -112,6 +119,10 @@ int Chunk::disassembleInstruction(int offset) {
       return simpleInstruction("OP_DIVIDE", offset);
     case OP_PRINT:
       return simpleInstruction("OP_PRINT", offset);
+    case OP_JUMP:
+      return jumpInstruction("OP_JUMP", 1, offset);
+    case OP_JUMP_IF_FALSE:
+      return jumpInstruction("OP_JUMP_IF_FALSE", 1, offset);
     case OP_RETURN:
       return simpleInstruction("OP_RETURN", offset);
     default:

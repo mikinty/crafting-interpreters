@@ -49,6 +49,8 @@ public:
   bool getHadError();
   void emitByte(uint8_t byte);
   void emitBytes(uint8_t byte1, uint8_t byte2);
+  int emitJump(uint8_t instruction);
+  void patchJump(int offset);
   void emitReturn();
   void emitConstant(Value value);
   void endCompiler();
@@ -65,6 +67,7 @@ public:
   bool check(TokenType type);
   void printStatement();
   void expressionStatement();
+  void ifStatement();
   void synchronize();
   void varDeclaration();
   uint8_t parseVariable(const char *errorMessage);
