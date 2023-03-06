@@ -73,7 +73,7 @@ std::map<TokenType, ParseRule> rules = {
   {TOKEN_IDENTIFIER,    ParseRule(&Parser::variable, NULL, PREC_NONE)},
   {TOKEN_STRING,        ParseRule(&Parser::string, NULL, PREC_NONE)},
   {TOKEN_NUMBER,        ParseRule(&Parser::number, NULL, PREC_NONE)},
-  {TOKEN_AND,           ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_AND,           ParseRule(NULL, &Parser::and_, PREC_AND)},
   {TOKEN_CLASS,         ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_ELSE,          ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_FALSE,         ParseRule(&Parser::literal, NULL, PREC_NONE)},
@@ -81,7 +81,7 @@ std::map<TokenType, ParseRule> rules = {
   {TOKEN_FUN,           ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_IF,            ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_NIL,           ParseRule(&Parser::literal, NULL, PREC_NONE)},
-  {TOKEN_OR,            ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_OR,            ParseRule(NULL, &Parser::or_, PREC_OR)},
   {TOKEN_PRINT,         ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_RETURN,        ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_SUPER,         ParseRule(NULL, NULL, PREC_NONE)},
@@ -166,6 +166,16 @@ void Parser::emitBytes(uint8_t byte1, uint8_t byte2) {
   emitByte(byte2);
 }
 
+void Parser::emitLoop(int loopStart) {
+  emitByte(OP_LOOP);
+
+  auto offset = currentChunk().count() - loopStart + 2;
+  if (offset > UINT16_MAX) error("Loop body too large.");
+
+  emitByte((offset >> 8) & 0xff);
+  emitByte(offset & 0xff);
+}
+
 int Parser::emitJump(uint8_t instruction) {
   emitByte(instruction);
   emitByte(0xff);
@@ -204,7 +214,7 @@ void Parser::emitConstant(Value value) {
 
 void Parser::patchJump(int offset) {
   // -2 to adjust for the bytecode for the jump offset itself
-  int jump = currentChunk().code.size() - offset - 2;
+  int jump = currentChunk().count() - offset - 2;
 
   if (jump > UINT16_MAX) {
     error("Too much code to jump over.");
@@ -221,6 +231,17 @@ void Parser::endCompiler() {
 void Parser::number(bool canAssign) {
   double value = std::stod(previous.source.substr(previous.start, previous.length));
   emitConstant(NUMBER_VAL(value));
+}
+
+void Parser::or_(bool canAssign) {
+  auto elseJump = emitJump(OP_JUMP_IF_FALSE);
+  auto endJump = emitJump(OP_JUMP);
+
+  patchJump(elseJump);
+  emitByte(OP_POP);
+
+  parsePrecedence(PREC_OR);
+  patchJump(endJump);
 }
 
 void Parser::string(bool canAssign) {
@@ -279,6 +300,15 @@ void Parser::unary(bool canAssign) {
 
 static ParseRule& getRule(TokenType type) {
   return rules[type];
+}
+
+void Parser::and_(bool canAssign) {
+  auto endJump = emitJump(OP_JUMP_IF_FALSE);
+
+  emitByte(OP_POP);
+  parsePrecedence(PREC_AND);
+
+  patchJump(endJump);
 }
 
 void Parser::binary(bool canAssign) {
@@ -354,6 +384,53 @@ void Parser::expressionStatement() {
   emitByte(OP_POP);
 }
 
+void Parser::forStatement() {
+  Compiler* compiler = Compiler::GetInstance();
+  compiler->beginScope();
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+
+  if (match(TOKEN_SEMICOLON)) {
+    // no initializer
+  } else if (match(TOKEN_VAR)) {
+    varDeclaration();
+  } else {
+    expressionStatement();
+  }
+
+  int loopStart = currentChunk().count();
+  int exitJump = -1;
+  if (!match(TOKEN_SEMICOLON)) {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");    
+
+    // Jump out of the loop if the condition is false
+    exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+  }
+
+  if (!match(TOKEN_RIGHT_PAREN)) {
+    auto bodyJump = emitJump(OP_JUMP);
+    auto incrementStart = currentChunk().count();
+    expression();
+    emitByte(OP_POP);
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clause");
+
+    emitLoop(loopStart);
+    loopStart = incrementStart;
+    patchJump(bodyJump);
+  }
+
+  statement();
+  emitLoop(loopStart);
+
+  if (exitJump != -1) {
+    patchJump(exitJump);
+    emitByte(OP_POP); // Pop off the condition
+  }
+
+  compiler->endScope(this);
+}
+
 void Parser::ifStatement() {
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
   expression();
@@ -379,6 +456,21 @@ void Parser::printStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after value.");
   emitByte(OP_PRINT);
+}
+
+void Parser::whileStatement() {
+  int loopStart = currentChunk().count();
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+  expression(); 
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+  auto exitJump = emitJump(OP_JUMP_IF_FALSE);
+  emitByte(OP_POP);
+  statement();
+  emitLoop(loopStart);
+
+  patchJump(exitJump);
+  emitByte(OP_POP);
 }
 
 void Parser::synchronize() {
@@ -508,8 +600,12 @@ void Parser::declaration() {
 void Parser::statement() {
   if (match(TOKEN_PRINT)) {
     printStatement();
+  } else if (match(TOKEN_FOR)) {
+    forStatement();
   } else if (match(TOKEN_IF)) {
     ifStatement();
+  } else if (match(TOKEN_WHILE)) {
+    whileStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {
     Compiler* compiler = Compiler::GetInstance();
     compiler->beginScope();

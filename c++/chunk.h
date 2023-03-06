@@ -28,6 +28,7 @@ enum OpCode {
   OP_PRINT,
   OP_JUMP,
   OP_JUMP_IF_FALSE,
+  OP_LOOP,
   OP_RETURN,
 };
 
@@ -82,6 +83,7 @@ public:
   void freeChunk();
   int addConstant(Value value);
   std::vector<int>& getLines();
+  int count();
 };
 
 void printValue(Value value);

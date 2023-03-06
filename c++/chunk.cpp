@@ -48,6 +48,10 @@ static int simpleInstruction(const std::string& name, int offset) {
   return offset + 1;
 }
 
+int Chunk::count() {
+  return code.size();
+}
+
 int Chunk::byteInstruction(const std::string& name, int offset) {
   uint8_t slot = code[offset + 1];
   fmt::printf("%-16s %4d\n", name.c_str(), slot);
@@ -123,6 +127,8 @@ int Chunk::disassembleInstruction(int offset) {
       return jumpInstruction("OP_JUMP", 1, offset);
     case OP_JUMP_IF_FALSE:
       return jumpInstruction("OP_JUMP_IF_FALSE", 1, offset);
+    case OP_LOOP:
+      return jumpInstruction("OP_LOOP", -1, offset);
     case OP_RETURN:
       return simpleInstruction("OP_RETURN", offset);
     default:

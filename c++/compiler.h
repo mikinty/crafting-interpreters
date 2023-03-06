@@ -81,6 +81,11 @@ public:
   bool identifiersEqual(Token a, Token b);
   int resolveLocal(Compiler* compiler, Token* name);
   void markInitialized();
+  void and_(bool canAssign);
+  void or_(bool canAssign);
+  void whileStatement();
+  void emitLoop(int loopStart);
+  void forStatement();
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);
