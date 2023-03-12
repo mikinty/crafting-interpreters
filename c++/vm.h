@@ -1,6 +1,7 @@
 #ifndef clox_vm_h
 #define clox_vm_h
 
+#include "object.h"
 #include "chunk.h"
 #include "memory.h"
 #include <vector>
@@ -12,6 +13,12 @@ typedef enum
   INTERPRET_COMPILE_ERROR,
   INTERPRET_RUNTIME_ERROR,
 } InterpretResult;
+
+typedef struct {
+  ObjFunction* function;
+  uint8_t* ip;
+  Value* slots;
+} CallFrame;
 
 class VM
 {

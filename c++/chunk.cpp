@@ -137,7 +137,8 @@ int Chunk::disassembleInstruction(int offset) {
   }
 }
 
-void Chunk::disassembleChunk() {
+void Chunk::disassembleChunk(const std::string& name) {
+  fmt::printf("== %s ==\n", name);
   for (size_t offset = 0; offset < code.size();) {
     offset = disassembleInstruction(offset);
   }

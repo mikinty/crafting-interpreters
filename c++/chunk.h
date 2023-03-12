@@ -78,7 +78,7 @@ public:
   std::vector<Value> constants;
   std::vector<uint8_t> code;
   void writeChunk(uint8_t byte, int line);
-  void disassembleChunk();
+  void disassembleChunk(const std::string& name);
   int disassembleInstruction(int offset);
   void freeChunk();
   int addConstant(Value value);

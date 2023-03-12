@@ -22,16 +22,31 @@ typedef enum
   PREC_PRIMARY
 } Precedence;
 
-bool compile(std::string &source, Chunk &chunk);
+typedef enum {
+  TYPE_FUNCTION,
+  TYPE_SCRIPT,
+} FunctionType;
+
+ObjFunction* compile(std::string &source, Chunk &chunk);
 
 class Compiler;
 
+/**
+ * It feels that the book does not do a good job of separating the Parser from
+ * the compiler. I found that later on, especially once we started implementing
+ * functions, that the Parser is essentially intertwined with the Compiler, and
+ * there's little independence between them. My only separation for the two is
+ * the fact that the Compiler is a singleton and needs to be accessed
+ * separately. But I've already exposed lots of Compiler fields.
+ */
 class Parser
 {
 private:
   Token &current;
   Token &previous;
   Scanner &scanner;
+  // TODO: May need to deprecate this since we now just use the ObjFunction on
+  // the compiler
   Chunk compilingChunk;
   bool hadError;
   bool panicMode;
@@ -53,7 +68,7 @@ public:
   void patchJump(int offset);
   void emitReturn();
   void emitConstant(Value value);
-  void endCompiler();
+  ObjFunction* endCompiler();
   void number(bool canAssign);
   void string(bool canAssign);
   void grouping(bool canAssign);
@@ -119,12 +134,22 @@ public:
 class Compiler
 {
 private:
+  ObjFunction* function;
+  FunctionType type;
+
   Local locals[UINT8_COUNT];
   int localCount;
   int scopeDepth;
-  Compiler(int localCount, int scopeDepth) {
-    this->localCount = localCount;
-    this->scopeDepth = scopeDepth;
+  Compiler(FunctionType type) {
+    this->function = NULL;
+    this->type = type;
+    this->localCount = 0;
+    this->scopeDepth = 0;
+    this->function = newFunction();
+
+    Local local = this->locals[this->localCount++];
+    local.depth = 0;
+    local.name = Token();
   }
   static Compiler *compiler_;
 
@@ -140,6 +165,8 @@ public:
   void incLocalCount();
   void decLocalCount();
   Local* getLocals();
+  ObjFunction* getFunction();
 };
+
 
 #endif

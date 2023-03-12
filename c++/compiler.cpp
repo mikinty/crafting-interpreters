@@ -13,7 +13,7 @@ Compiler *Compiler::GetInstance()
 {
   if (compiler_ == nullptr)
   {
-    compiler_ = new Compiler(0, 0);
+    compiler_ = new Compiler(TYPE_SCRIPT);
   }
   return compiler_;
 }
@@ -48,6 +48,10 @@ void Compiler::decLocalCount() {
 
 Local* Compiler::getLocals() {
   return locals;
+}
+
+ObjFunction* Compiler::getFunction() {
+  return function;
 }
 
 std::map<TokenType, ParseRule> rules = {
@@ -185,21 +189,16 @@ int Parser::emitJump(uint8_t instruction) {
 }
 
 Chunk& Parser::currentChunk() {
-  return compilingChunk; 
+  Compiler* compiler = Compiler::GetInstance();
+  return compiler->getFunction()->chunk;
 }
 
 void Parser::emitReturn() {
   emitByte(OP_RETURN);
-#ifdef DEBUG_PRINT_CODE
-  if (hadError) {
-    std::cout << "finished with errors\n";
-  }
-  currentChunk().disassembleChunk();
-#endif
 }
 
 uint8_t Parser::makeConstant(Value value) {
-  int constant = compilingChunk.addConstant(value);
+  int constant = currentChunk().addConstant(value);
   if (constant > UINT8_MAX) {
     error("Too many constants in one chunk.");
     return 0;
@@ -224,8 +223,16 @@ void Parser::patchJump(int offset) {
   currentChunk().code[offset + 1] = jump & 0xff;
 }
 
-void Parser::endCompiler() {
+ObjFunction* Parser::endCompiler() {
   emitReturn();
+  ObjFunction* function = Compiler::GetInstance()->getFunction();
+#ifdef DEBUG_PRINT_CODE
+  if (hadError) {
+    std::cout << "finished with errors\n";
+  }
+  currentChunk().disassembleChunk(function->name != NULL ? function->name->chars : "script");
+#endif
+  return function;
 }
 
 void Parser::number(bool canAssign) {
@@ -626,7 +633,7 @@ bool Parser::check(TokenType type) {
   return current.type == type;
 }
 
-bool compile(std::string& source, Chunk& chunk) {
+ObjFunction* compile(std::string& source, Chunk& chunk) {
   Scanner scanner(source);
   auto current = Token(TOKEN_EOF, 0, 0, 0, source);
   auto previous = Token(TOKEN_EOF, 0, 0, 0, source);
@@ -639,5 +646,6 @@ bool compile(std::string& source, Chunk& chunk) {
 
   parser.endCompiler();
 
-  return !parser.getHadError();
+  ObjFunction* function = parser.endCompiler();
+  return parser.getHadError() ? NULL : function;
 }
