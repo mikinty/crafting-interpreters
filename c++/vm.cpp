@@ -27,10 +27,13 @@ void VM::concatenate() {
 }
 
 InterpretResult VM::run() {
-#define READ_BYTE() (chunk.code[ip++])
-#define READ_CONSTANT() (chunk.constants[chunk.code[ip++]])
+  CallFrame frame = frames[frameCount-1];
+#define READ_BYTE() (frame.ip++)
+#define READ_CONSTANT() (frame.function->chunk.constants[READ_BYTE()])
 // TODO: no idea what this READ_SHORT is doing with the ip, it probably doesn't work. I tried to have it mask into a 16-bit int.
-#define READ_SHORT() (ip += 2, (uint16_t)((chunk.code[ip-2] << 8) | chunk.code[ip-1]))
+#define READ_SHORT() \
+  (frame.ip += 2, \
+  (uint16_t)((frame.function->chunk.code[frame.ip-2] << 8) | frame.function->chunk.code[frame.ip-1]))
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
   do { \
@@ -44,8 +47,8 @@ InterpretResult VM::run() {
   } while (false)
 
   auto vm = VM::GetInstance();
-  ip = 0;
-  while (ip < chunk.code.size()) {
+  frame.ip = 0;
+  while (frame.ip < frame.function->chunk.code.size()) {
     #ifdef DEBUG_TRACE_EXECUTION
     for (Value value : stack) {
       std::cout << "[ ";
@@ -53,9 +56,9 @@ InterpretResult VM::run() {
       std::cout << " ]";
     }
     std::cout << "\n";
-    chunk.disassembleInstruction(ip);
+    frame.function->chunk.disassembleInstruction(frame.ip);
     #endif
-    uint8_t instruction = chunk.code[ip++];
+    uint8_t instruction = frame.function->chunk.code[frame.ip++];
 
     switch (instruction) {
       case OP_CONSTANT:
@@ -110,12 +113,12 @@ InterpretResult VM::run() {
       }
       case OP_GET_LOCAL: {
         uint8_t slot = READ_BYTE();
-        vm->stack.push_back(vm->stack[slot]);
+        stack.push_back(frame.slots[slot]);
         break;
       }
       case OP_SET_LOCAL: {
         uint8_t slot = READ_BYTE();
-        vm->stack[slot] = peek(0);
+        frame.slots[slot] = peek(0);
         break;
       }
       case OP_GET_GLOBAL: {
@@ -158,19 +161,19 @@ InterpretResult VM::run() {
       }
       case OP_JUMP: {
         uint16_t offset = READ_SHORT();
-        ip += offset;
+        frame.ip += offset;
         break;
       }
       case OP_JUMP_IF_FALSE: {
         uint16_t offset = READ_SHORT();
         if (isFalsey(peek(0))) {
-          ip += offset;
+          frame.ip += offset;
         }
         break;
       }
       case OP_LOOP: {
         uint16_t offset = READ_SHORT();
-        ip -= offset;
+        frame.ip -= offset;
         break;
       }
       case OP_RETURN:
@@ -193,14 +196,21 @@ InterpretResult VM::run() {
 
 InterpretResult VM::interpret(std::string& source) {
   Chunk chunk;
+  ObjFunction* function = compile(source, chunk);
 
-  if (!compile(source, chunk)) {
+  if (function == NULL) {
     return INTERPRET_COMPILE_ERROR;
   }
 
-  chunk = chunk;
-  ip = 0;
-  objects = NULL;
+  stack.push_back(OBJ_VAL(function));
+  CallFrame* frame = &frames[frameCount++];
+  frame->function = function;
+  // TODO: I think we are using ip to be the instruction pointer, and we can't
+  // just overload it with the beginning of the code array
+  // function->chunk.code. IMO bad style to overload the ip to mean pointer and
+  // also the beginning of the code array.
+  frame->ip = 0;
+  frame->slots = stack;
 
   return run();
 }
@@ -216,8 +226,11 @@ void VM::runtimeError(const char* format, ...) {
   va_end(args);
   std::fputs("\n", stderr);
 
-  auto instruction = ip - chunk.code.size() - 1;
-  auto line = chunk.getLines()[instruction];
+  CallFrame frame = frames[frameCount - 1];
+  auto instruction = frame.ip - frame.function->chunk.code.size() - 1;
+  auto line = frame.function->chunk.getLines()[instruction];
   std::fprintf(stderr, "[line %d] in script\n", line);
   // resetStack();
+  // TODO: I only added this here because I don't have resetStack() in my code
+  frameCount = 0;
 }

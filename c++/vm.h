@@ -7,6 +7,9 @@
 #include <vector>
 #include <map>
 
+#define FRAMES_MAX 64
+#define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
+
 typedef enum
 {
   INTERPRET_OK,
@@ -14,17 +17,25 @@ typedef enum
   INTERPRET_RUNTIME_ERROR,
 } InterpretResult;
 
+/**
+ * We differ slightly from the book implementation here, where we have a
+ * separate instruction pointer and code array. The book just uses the ip as a
+ * pointer inside the code array, which I found to be weird, as it overloads
+ * the definition of a pointer to be index and accessor.
+ */
 typedef struct {
   ObjFunction* function;
-  uint8_t* ip;
-  Value* slots;
+  size_t ip;
+  std::vector<uint8_t> code;
+  std::vector<Value> slots;
 } CallFrame;
 
 class VM
 {
 private:
-  Chunk chunk;
-  size_t ip;
+  CallFrame frames[FRAMES_MAX];
+  int frameCount;
+
   std::vector<Value> stack;
   InterpretResult run();
   void concatenate();
