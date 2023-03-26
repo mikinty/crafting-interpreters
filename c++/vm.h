@@ -27,6 +27,12 @@ typedef struct {
   ObjFunction* function;
   size_t ip;
   std::vector<uint8_t> code;
+  /**
+   * Slots contains the local variable values. This can change depending on the
+   * call stack, e.g. if we go into a function, our slots will shift to the end
+   * of the slots from before. Hence why it's called "slots" since we only see
+   * a slot of all value at any given time.
+   */
   std::vector<Value> slots;
 } CallFrame;
 
@@ -60,6 +66,8 @@ public:
 
   InterpretResult interpret(std::string &source);
   Value peek(int distance);
+  bool callValue(Value callee, int argCount);
+  bool call(ObjFunction* function, int argCount);
   void runtimeError(const char *format, ...);
   /**
    * Singletons should not be cloneable.

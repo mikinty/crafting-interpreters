@@ -93,7 +93,7 @@ ObjFunction* Compiler::getFunction() {
 }
 
 std::map<TokenType, ParseRule> rules = {
-  {TOKEN_LEFT_PAREN,    ParseRule(&Parser::grouping, NULL, PREC_NONE)},
+  {TOKEN_LEFT_PAREN,    ParseRule(&Parser::grouping, &Parser::call, PREC_CALL)},
   {TOKEN_RIGHT_PAREN,   ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_LEFT_BRACE,    ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_RIGHT_BRACE,   ParseRule(NULL, NULL, PREC_NONE)},
@@ -381,6 +381,11 @@ void Parser::binary(bool canAssign) {
   }
 }
 
+void Parser::call(bool canAssign) {
+  uint8_t argCount = argumentList();
+  emitBytes(OP_CALL, argCount);
+}
+
 void Parser::literal(bool canAssign) {
   switch (previous.type) {
     case TOKEN_FALSE: emitByte(OP_FALSE); break;
@@ -664,6 +669,19 @@ void Parser::defineVariable(uint8_t global) {
   }
   
   emitBytes(OP_DEFINE_GLOBAL, global);
+}
+
+uint8_t Parser::argumentList() {
+  uint8_t argCount = 0;
+  if (!check(TOKEN_RIGHT_PAREN)) {
+    do {
+      expression();
+      argCount++;
+    } while (match(TOKEN_COMMA));
+  }
+
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+  return argCount;
 }
 
 void Parser::declaration() {

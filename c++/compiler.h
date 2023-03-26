@@ -103,6 +103,8 @@ public:
   void forStatement();
   void funDeclaration();
   void function(FunctionType type);
+  void call(bool canAssign);
+  uint8_t argumentList();
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);

@@ -176,6 +176,14 @@ InterpretResult VM::run() {
         frame.ip -= offset;
         break;
       }
+      case OP_CALL: {
+        int argCount = READ_BYTE();
+        if (!callValue(peek(argCount), argCount)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        frame = frames[frameCount - 1];
+        break;
+      }
       case OP_RETURN:
         {
           // Exit interpreter
@@ -203,20 +211,34 @@ InterpretResult VM::interpret(std::string& source) {
   }
 
   stack.push_back(OBJ_VAL(function));
-  CallFrame* frame = &frames[frameCount++];
-  frame->function = function;
-  // TODO: I think we are using ip to be the instruction pointer, and we can't
-  // just overload it with the beginning of the code array
-  // function->chunk.code. IMO bad style to overload the ip to mean pointer and
-  // also the beginning of the code array.
-  frame->ip = 0;
-  frame->slots = stack;
+  call(function, 0);
 
   return run();
 }
 
 Value VM::peek(int distance) {
   return stack[stack.size() - 1 - distance];
+}
+
+bool VM::call(ObjFunction* function, int argCount) {
+  CallFrame frame = frames[frameCount++];
+  frame.function = function;
+  frame.ip = 0;
+  frame.slots = std::vector<Value>(stack.end() - argCount - 1, stack.end());
+  return true;
+}
+
+bool VM::callValue(Value callee, int argCount) {
+  if (IS_OBJ(callee)) {
+    switch (OBJ_TYPE(callee)) {
+      case OBJ_FUNCTION:
+        return call(AS_FUNCTION(callee), argCount);
+      default:
+        break;
+    }
+  }
+  runtimeError("Can only callfunctions and classes.");
+  return false;
 }
 
 void VM::runtimeError(const char* format, ...) {
