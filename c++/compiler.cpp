@@ -424,7 +424,7 @@ void Parser::block() {
 }
 
 void Parser::function(FunctionType type) {
-  Compiler* compiler = Compiler::GetInstance();
+  Compiler* compiler = Compiler::GetInstance(true, TYPE_FUNCTION);
   compiler->beginScope();
 
   consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
