@@ -6,6 +6,7 @@
 #include "object.h"
 #include "memory.h"
 #include <string>
+#include <cstring>
 
 static bool isFalsey(Value value) {
   return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
@@ -252,6 +253,14 @@ bool VM::callValue(Value callee, int argCount) {
     switch (OBJ_TYPE(callee)) {
       case OBJ_FUNCTION:
         return call(AS_FUNCTION(callee), argCount);
+      case OBJ_NATIVE: {
+        NativeFn native = AS_NATIVE(callee);
+        std::vector<Value> newSlots = std::vector<Value>(stack.end() - argCount, stack.end());
+        Value result = native(argCount, newSlots);
+        stack = std::vector<Value>(stack.begin(), stack.end() - argCount - 1);
+        stack.push_back(result);
+        return true;
+      }
       default:
         break;
     }
@@ -288,4 +297,12 @@ void VM::runtimeError(const char* format, ...) {
   // TODO: I only added this here because I don't have resetStack() in my code
   frameCount = 0;
   // resetStack();
+}
+
+void VM::defineNative(const char* name, NativeFn function) {
+  stack.push_back(OBJ_VAL(copyString(name, (int)strlen(name))));
+  stack.push_back(OBJ_VAL(newNative(function)));
+  globals[AS_STRING(stack[0])] = stack[1];
+  stack.pop_back();
+  stack.pop_back();
 }

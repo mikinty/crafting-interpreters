@@ -4,6 +4,11 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <time.h>
+
+static Value clockNative(int argCount, std::vector<Value>& args) {
+  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
 
 VM *VM::vm_ = nullptr;
 
@@ -19,6 +24,8 @@ VM *VM::GetInstance()
   if (vm_ == nullptr)
   {
     vm_ = new VM();
+
+    vm_->defineNative("clock", clockNative);
   }
   return vm_;
 }

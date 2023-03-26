@@ -69,6 +69,7 @@ public:
   bool callValue(Value callee, int argCount);
   bool call(ObjFunction* function, int argCount);
   void runtimeError(const char *format, ...);
+  void defineNative(const char* name, NativeFn function);
   /**
    * Singletons should not be cloneable.
    */
