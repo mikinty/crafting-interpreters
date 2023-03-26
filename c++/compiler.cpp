@@ -9,14 +9,49 @@
 
 Compiler *Compiler::compiler_ = nullptr;
 
-Compiler *Compiler::GetInstance()
+/**
+ * So this is kinda weird. In the book they have a linked list of Compilers.
+ * The issue I sort of have is I wanted to make Compilers global, so I made it
+ * a singleton. But the static method itself used to only return the single
+ * compiler. Now that we have multiple compilers, what can we do? Well I think
+ * it's agnostic to the current compiler, all the static function says is hey,
+ * I have a reference to some compiler, and it used to use null to say it
+ * exists and not null if it exists.
+ * 
+ * I think what I can do is just modify this static method so that it manages
+ * the linked list. In the get instance, we have an option to add to the linked
+ * list, otherwise we just return whatever the current pointer is. Each
+ * Compiler now has a reference to its previous enclosing compiler as well.
+ * 
+ * popCompiler will take care of "killing" the existing compiler and then 
+ */
+Compiler *Compiler::GetInstance(bool newInstance = false, FunctionType type = TYPE_SCRIPT)
 {
-  if (compiler_ == nullptr)
+  if (compiler_ == nullptr || newInstance)
   {
-    compiler_ = new Compiler(TYPE_SCRIPT);
+    Compiler* old_compiler = compiler_;
+    compiler_ = new Compiler(type);
+
+    // Point back to the old compiler
+    compiler_->enclosing = old_compiler;
   }
   return compiler_;
 }
+
+/**
+ * This is the best way I could figure out managing the linked list of
+ * compilers I have
+ */
+void Compiler::popCompiler() {
+  Compiler* old_compiler = compiler_;
+  compiler_ = compiler_->enclosing;
+
+  // TODO: This is not exception safe. If the program throws an exception, we
+  // will have memory that is never cleaned up...o well this is a bad compiler
+  // design.
+  delete old_compiler;
+}
+
 void Compiler::beginScope() {
   scopeDepth++;
 }
@@ -225,13 +260,16 @@ void Parser::patchJump(int offset) {
 
 ObjFunction* Parser::endCompiler() {
   emitReturn();
-  ObjFunction* function = Compiler::GetInstance()->getFunction();
+  Compiler* compiler = Compiler::GetInstance();
+  ObjFunction* function = compiler->getFunction();
 #ifdef DEBUG_PRINT_CODE
   if (hadError) {
     std::cout << "finished with errors\n";
   }
   currentChunk().disassembleChunk(function->name != NULL ? function->name->chars : "script");
 #endif
+  // We exit the scope of the previous compiler
+  Compiler::popCompiler();
   return function;
 }
 
@@ -385,6 +423,26 @@ void Parser::block() {
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
+void Parser::function(FunctionType type) {
+  Compiler* compiler = Compiler::GetInstance();
+  compiler->beginScope();
+
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after function params.");
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+  block();
+
+  ObjFunction* function = endCompiler();
+  emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+}
+
+void Parser::funDeclaration() {
+  uint8_t global = parseVariable("Expect function name.");
+  markInitialized();
+  function(TYPE_FUNCTION);
+  defineVariable(global);
+}
+
 void Parser::expressionStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after value.");
@@ -529,6 +587,7 @@ uint8_t Parser::parseVariable(const char* errorMessage) {
 
 void Parser::markInitialized() {
   Compiler* compiler = Compiler::GetInstance();
+  if (compiler->getScopeDepth() == 0) return;
   compiler->getLocals()[compiler->getLocalCount() - 1].depth = compiler->getScopeDepth();
 }
 
@@ -595,7 +654,9 @@ void Parser::defineVariable(uint8_t global) {
 }
 
 void Parser::declaration() {
-  if (match(TOKEN_VAR)) {
+  if (match(TOKEN_FUN)) {
+    funDeclaration();
+  } else if (match(TOKEN_VAR)) {
     varDeclaration();
   } else {
     statement();

@@ -101,6 +101,8 @@ public:
   void whileStatement();
   void emitLoop(int loopStart);
   void forStatement();
+  void funDeclaration();
+  void function(FunctionType type);
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);
@@ -154,9 +156,11 @@ private:
   static Compiler *compiler_;
 
 public:
+  Compiler* enclosing;
   Compiler(Compiler &other) = delete;
   void operator=(const Compiler &) = delete;
-  static Compiler *GetInstance();
+  static Compiler *GetInstance(bool newInstance = false, FunctionType type = TYPE_SCRIPT);
+  static void popCompiler();
   ~Compiler() {}
   void beginScope();
   void endScope(Parser* parser);
