@@ -186,8 +186,18 @@ InterpretResult VM::run() {
       }
       case OP_RETURN:
         {
-          // Exit interpreter
-          return INTERPRET_OK;
+          Value result = stack.back();
+          stack.pop_back();
+          frameCount--;
+          if (frameCount == 0) {
+            stack.pop_back();
+            return INTERPRET_OK;
+          }
+
+          stack = frame.slots;
+          stack.push_back(result);
+          frame = frames[frameCount-1];
+          break;
         }
       default:
         runtimeError("Unimplemented instruction in VM run()");
@@ -221,6 +231,15 @@ Value VM::peek(int distance) {
 }
 
 bool VM::call(ObjFunction* function, int argCount) {
+  if (argCount != function->arity) {
+    runtimeError("Expected %d arguments but god %d.", function->arity, argCount);
+  }
+
+  if (frameCount == FRAMES_MAX) {
+    runtimeError("Stack overflow");
+    return false;
+  }
+
   CallFrame frame = frames[frameCount++];
   frame.function = function;
   frame.ip = 0;
@@ -249,10 +268,24 @@ void VM::runtimeError(const char* format, ...) {
   std::fputs("\n", stderr);
 
   CallFrame frame = frames[frameCount - 1];
-  auto instruction = frame.ip - frame.function->chunk.code.size() - 1;
+  // Since our ip is relative to the chunk, I think we can just leave it as just ip
+  auto instruction = frame.ip;
   auto line = frame.function->chunk.getLines()[instruction];
   std::fprintf(stderr, "[line %d] in script\n", line);
-  // resetStack();
+
+  for (int i = frameCount - 1; i >= 0; i--) {
+    CallFrame frame = frames[i];
+    ObjFunction* function = frame.function;
+    auto instruction = frame.ip;
+    fprintf(stderr, "[line %d] in ", function->chunk.getLines()[instruction]);
+    if (function->name == NULL) {
+      fprintf(stderr, "script\n");
+    } else {
+      fprintf(stderr, "%s()\n", function->name->chars);
+    }
+  }
+  
   // TODO: I only added this here because I don't have resetStack() in my code
   frameCount = 0;
+  // resetStack();
 }

@@ -92,6 +92,10 @@ ObjFunction* Compiler::getFunction() {
   return function;
 }
 
+FunctionType Compiler::getType() {
+  return type;
+}
+
 std::map<TokenType, ParseRule> rules = {
   {TOKEN_LEFT_PAREN,    ParseRule(&Parser::grouping, &Parser::call, PREC_CALL)},
   {TOKEN_RIGHT_PAREN,   ParseRule(NULL, NULL, PREC_NONE)},
@@ -232,6 +236,7 @@ Chunk& Parser::currentChunk() {
 }
 
 void Parser::emitReturn() {
+  emitByte(OP_NIL);
   emitByte(OP_RETURN);
 }
 
@@ -541,6 +546,21 @@ void Parser::printStatement() {
   emitByte(OP_PRINT);
 }
 
+void Parser::returnStatement() {
+  Compiler* compiler = Compiler::GetInstance();
+  if (compiler->getType() == TYPE_SCRIPT) {
+    error("Can't return from the top level");
+  }
+
+  if (match(TOKEN_SEMICOLON)) {
+    emitReturn();
+  } else {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+    emitByte(OP_RETURN);
+  }
+}
+
 void Parser::whileStatement() {
   int loopStart = currentChunk().count();
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
@@ -703,6 +723,8 @@ void Parser::statement() {
     forStatement();
   } else if (match(TOKEN_IF)) {
     ifStatement();
+  } else if (match(TOKEN_RETURN)) {
+    returnStatement();
   } else if (match(TOKEN_WHILE)) {
     whileStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {

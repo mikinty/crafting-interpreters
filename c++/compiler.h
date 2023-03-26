@@ -105,6 +105,7 @@ public:
   void function(FunctionType type);
   void call(bool canAssign);
   uint8_t argumentList();
+  void returnStatement();
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);
@@ -172,6 +173,7 @@ public:
   void decLocalCount();
   Local* getLocals();
   ObjFunction* getFunction();
+  FunctionType getType();
 };
 
 
