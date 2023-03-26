@@ -25,12 +25,15 @@ Compiler *Compiler::compiler_ = nullptr;
  * 
  * popCompiler will take care of "killing" the existing compiler and then 
  */
-Compiler *Compiler::GetInstance(bool newInstance = false, FunctionType type = TYPE_SCRIPT)
+Compiler *Compiler::GetInstance(bool newInstance = false, FunctionType type = TYPE_SCRIPT, ObjString* functionName = NULL)
 {
   if (compiler_ == nullptr || newInstance)
   {
     Compiler* old_compiler = compiler_;
     compiler_ = new Compiler(type);
+    if (type != TYPE_SCRIPT) {
+      compiler_->function->name = functionName;
+    }
 
     // Point back to the old compiler
     compiler_->enclosing = old_compiler;
@@ -424,10 +427,20 @@ void Parser::block() {
 }
 
 void Parser::function(FunctionType type) {
-  Compiler* compiler = Compiler::GetInstance(true, TYPE_FUNCTION);
+  Compiler* compiler = Compiler::GetInstance(true, TYPE_FUNCTION, copyString(previous.source.substr(previous.start, previous.length).c_str(), previous.length));
   compiler->beginScope();
 
   consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+  if (!check(TOKEN_RIGHT_PAREN)) {
+    do {
+      compiler->getFunction()->arity++;
+      if (compiler->getFunction()->arity > 255) {
+        errorAtCurrent("Functions can't have more than 255 parameters.");
+      }
+      uint8_t constant = parseVariable("Expect parameter name.");
+      defineVariable(constant);
+    } while (match(TOKEN_COMMA));
+  }
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after function params.");
   consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
   block();

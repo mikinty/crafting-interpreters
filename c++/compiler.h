@@ -159,7 +159,7 @@ public:
   Compiler* enclosing;
   Compiler(Compiler &other) = delete;
   void operator=(const Compiler &) = delete;
-  static Compiler *GetInstance(bool newInstance, FunctionType type);
+  static Compiler *GetInstance(bool newInstance, FunctionType type, ObjString* functionName);
   static void popCompiler();
   ~Compiler() {}
   void beginScope();
