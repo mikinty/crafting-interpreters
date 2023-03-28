@@ -25,6 +25,20 @@ static Obj* allocateObject(size_t size, ObjType type) {
   return object;
 }
 
+ObjClosure* newClosure(ObjFunction* function) {
+  std::vector<ObjUpvalue*> upvalues = std::vector<ObjUpvalue*>();
+
+  for (int i = 0; i < function->upvalueCount; i++) {
+    upvalues.push_back(NULL);
+  }
+
+  ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
+  closure->function = function;
+  closure->upvalues = upvalues;
+  closure->upvalueCount = function->upvalueCount;
+  return closure;
+}
+
 ObjFunction* newFunction() {
   ObjFunction* function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
   function->arity = 0;
@@ -69,6 +83,20 @@ ObjString* copyString(const char* chars, int length) {
   return allocateString(heapChars, length, hash);
 }
 
+/**
+ * TODO: This is definitely not going to work.
+ * The location is suppose to refer to the location in the slot (aka index),
+ * not just the slot itself. This is something I'd have to fix if I ever want
+ * to get this compiler working, but I doubt I ever will.
+ */
+ObjUpvalue* newUpvalue(std::vector<Value>& slot) {
+  ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
+  upvalue->closed = NIL_VAL;
+  upvalue->location = slot;
+  upvalue->next = NULL;
+  return upvalue;
+}
+
 static void printFunction(ObjFunction* function) {
   if (function->name == NULL) {
     printf("<script>");
@@ -79,8 +107,14 @@ static void printFunction(ObjFunction* function) {
 
 void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
+    case OBJ_CLOSURE:
+      printFunction(AS_CLOSURE(value)->function);
+      break;
     case OBJ_STRING:
       printf("%s", AS_CSTRING(value));
+      break;
+    case OBJ_UPVALUE:
+      printf("upvalue");
       break;
     case OBJ_FUNCTION:
       printFunction(AS_FUNCTION(value));

@@ -22,12 +22,13 @@ typedef enum
   PREC_PRIMARY
 } Precedence;
 
-typedef enum {
+typedef enum
+{
   TYPE_FUNCTION,
   TYPE_SCRIPT,
 } FunctionType;
 
-ObjFunction* compile(std::string &source, Chunk &chunk);
+ObjFunction *compile(std::string &source, Chunk &chunk);
 
 class Compiler;
 
@@ -38,6 +39,12 @@ class Compiler;
  * there's little independence between them. My only separation for the two is
  * the fact that the Compiler is a singleton and needs to be accessed
  * separately. But I've already exposed lots of Compiler fields.
+ *
+ * In retrospect, I think I would've combined the parser and compiler into one
+ * class, but it does seem a bit weird to do that based on what we learn about
+ * the compiler and parser early on. The book just treats a lot of the compiler
+ * as a static global, which doesn't do a good job of encapsulating what it is
+ * independent from.
  */
 class Parser
 {
@@ -68,7 +75,7 @@ public:
   void patchJump(int offset);
   void emitReturn();
   void emitConstant(Value value);
-  ObjFunction* endCompiler();
+  ObjFunction *endCompiler();
   void number(bool canAssign);
   void string(bool canAssign);
   void grouping(bool canAssign);
@@ -94,7 +101,7 @@ public:
   void declareVariable();
   void addLocal(Token name);
   bool identifiersEqual(Token a, Token b);
-  int resolveLocal(Compiler* compiler, Token* name);
+  int resolveLocal(Compiler *compiler, Token *name);
   void markInitialized();
   void and_(bool canAssign);
   void or_(bool canAssign);
@@ -106,6 +113,8 @@ public:
   void call(bool canAssign);
   uint8_t argumentList();
   void returnStatement();
+  int resolveUpvalue(Compiler *compiler, Token *name);
+  int addUpvalue(Compiler *compiler, uint8_t index, bool isLocal);
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);
@@ -130,22 +139,34 @@ class Local
 public:
   Token name;
   int depth;
-  Local() {
+  bool isCaptured;
+  Local()
+  {
     name = Token(TOKEN_ERROR, 0, 0, 0, "");
     depth = -1;
+    isCaptured = false;
   }
+};
+
+class Upvalue
+{
+public:
+  uint8_t index;
+  bool isLocal;
 };
 
 class Compiler
 {
 private:
-  ObjFunction* function;
+  ObjFunction *function;
   FunctionType type;
 
   Local locals[UINT8_COUNT];
   int localCount;
+  Upvalue upvalues[UINT8_COUNT];
   int scopeDepth;
-  Compiler(FunctionType type) {
+  Compiler(FunctionType type)
+  {
     this->function = NULL;
     this->type = type;
     this->localCount = 0;
@@ -159,22 +180,22 @@ private:
   static Compiler *compiler_;
 
 public:
-  Compiler* enclosing;
+  Compiler *enclosing;
   Compiler(Compiler &other) = delete;
   void operator=(const Compiler &) = delete;
-  static Compiler *GetInstance(bool newInstance, FunctionType type, ObjString* functionName);
+  static Compiler *GetInstance(bool newInstance, FunctionType type, ObjString *functionName);
   static void popCompiler();
   ~Compiler() {}
   void beginScope();
-  void endScope(Parser* parser);
+  void endScope(Parser *parser);
   int getScopeDepth();
   int getLocalCount();
   void incLocalCount();
   void decLocalCount();
-  Local* getLocals();
-  ObjFunction* getFunction();
+  Local *getLocals();
+  ObjFunction *getFunction();
   FunctionType getType();
+  Upvalue* getUpvalues();
 };
-
 
 #endif

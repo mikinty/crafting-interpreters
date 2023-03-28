@@ -24,7 +24,7 @@ typedef enum
  * the definition of a pointer to be index and accessor.
  */
 typedef struct {
-  ObjFunction* function;
+  ObjClosure* closure;
   size_t ip;
   std::vector<uint8_t> code;
   /**
@@ -59,6 +59,7 @@ private:
 public:
   // For garbage collection
   Obj *objects;
+  ObjUpvalue *openUpvalues;
 
   // String interning
   std::map<uint32_t, ObjString*> strings;
@@ -67,9 +68,12 @@ public:
   InterpretResult interpret(std::string &source);
   Value peek(int distance);
   bool callValue(Value callee, int argCount);
-  bool call(ObjFunction* function, int argCount);
+  bool call(ObjClosure* function, int argCount);
   void runtimeError(const char *format, ...);
   void defineNative(const char* name, NativeFn function);
+  ObjUpvalue* captureUpvalue(std::vector<Value> local);
+  void closeUpvalues();
+  
   /**
    * Singletons should not be cloneable.
    */

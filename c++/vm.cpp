@@ -30,11 +30,11 @@ void VM::concatenate() {
 InterpretResult VM::run() {
   CallFrame frame = frames[frameCount-1];
 #define READ_BYTE() (frame.ip++)
-#define READ_CONSTANT() (frame.function->chunk.constants[READ_BYTE()])
+#define READ_CONSTANT() (frame.closure->function->chunk.constants[READ_BYTE()])
 // TODO: no idea what this READ_SHORT is doing with the ip, it probably doesn't work. I tried to have it mask into a 16-bit int.
 #define READ_SHORT() \
   (frame.ip += 2, \
-  (uint16_t)((frame.function->chunk.code[frame.ip-2] << 8) | frame.function->chunk.code[frame.ip-1]))
+  (uint16_t)((frame.closure->function->chunk.code[frame.ip-2] << 8) | frame.closure->function->chunk.code[frame.ip-1]))
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
   do { \
@@ -49,7 +49,7 @@ InterpretResult VM::run() {
 
   auto vm = VM::GetInstance();
   frame.ip = 0;
-  while (frame.ip < frame.function->chunk.code.size()) {
+  while (frame.ip < frame.closure->function->chunk.code.size()) {
     #ifdef DEBUG_TRACE_EXECUTION
     for (Value value : stack) {
       std::cout << "[ ";
@@ -57,9 +57,9 @@ InterpretResult VM::run() {
       std::cout << " ]";
     }
     std::cout << "\n";
-    frame.function->chunk.disassembleInstruction(frame.ip);
+    frame.closure->function->chunk.disassembleInstruction(frame.ip);
     #endif
-    uint8_t instruction = frame.function->chunk.code[frame.ip++];
+    uint8_t instruction = frame.closure->function->chunk.code[frame.ip++];
 
     switch (instruction) {
       case OP_CONSTANT:
@@ -144,6 +144,16 @@ InterpretResult VM::run() {
         }
         break;
       }
+      case OP_GET_UPVALUE: {
+        uint8_t slot = READ_BYTE();
+        stack.push_back(frame.closure->upvalues[slot]->location[0]);
+        break;
+      }
+      case OP_SET_UPVALUE: {
+        uint8_t slot = READ_BYTE();
+        frame.closure->upvalues[slot]->location[0] = peek(0);
+        break;
+      }
       case OP_EQUAL: {
         Value b = stack.back();
         stack.pop_back();
@@ -185,10 +195,30 @@ InterpretResult VM::run() {
         frame = frames[frameCount - 1];
         break;
       }
+      case OP_CLOSURE: {
+        ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
+        ObjClosure* closure = newClosure(function);
+        stack.push_back(OBJ_VAL(closure));
+        for (int i = 0; i < closure->upvalueCount; i++) {
+          uint8_t isLocal = READ_BYTE();
+          uint8_t index = READ_BYTE();
+          if (isLocal) {
+            closure->upvalues[i] = captureUpvalue(std::vector<Value>(frame.slots.begin() + index, frame.slots.end()));
+          } else {
+            closure->upvalues[i] = frame.closure->upvalues[index];
+          }
+        }
+        break;
+      }
+      case OP_CLOSE_UPVALUE:
+        closeUpvalues();
+        stack.pop_back();
+        break;
       case OP_RETURN:
         {
           Value result = stack.back();
           stack.pop_back();
+          closeUpvalues();
           frameCount--;
           if (frameCount == 0) {
             stack.pop_back();
@@ -222,7 +252,10 @@ InterpretResult VM::interpret(std::string& source) {
   }
 
   stack.push_back(OBJ_VAL(function));
-  call(function, 0);
+  ObjClosure* closure = newClosure(function);
+  stack.pop_back();
+  stack.push_back(OBJ_VAL(closure));
+  call(closure, 0);
 
   return run();
 }
@@ -231,9 +264,9 @@ Value VM::peek(int distance) {
   return stack[stack.size() - 1 - distance];
 }
 
-bool VM::call(ObjFunction* function, int argCount) {
-  if (argCount != function->arity) {
-    runtimeError("Expected %d arguments but god %d.", function->arity, argCount);
+bool VM::call(ObjClosure* closure, int argCount) {
+  if (argCount != closure->function->arity) {
+    runtimeError("Expected %d arguments but god %d.", closure->function->arity, argCount);
   }
 
   if (frameCount == FRAMES_MAX) {
@@ -242,7 +275,7 @@ bool VM::call(ObjFunction* function, int argCount) {
   }
 
   CallFrame frame = frames[frameCount++];
-  frame.function = function;
+  frame.closure = closure;
   frame.ip = 0;
   frame.slots = std::vector<Value>(stack.end() - argCount - 1, stack.end());
   return true;
@@ -251,8 +284,8 @@ bool VM::call(ObjFunction* function, int argCount) {
 bool VM::callValue(Value callee, int argCount) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
-      case OBJ_FUNCTION:
-        return call(AS_FUNCTION(callee), argCount);
+      case OBJ_CLOSURE: 
+        return call(AS_CLOSURE(callee), argCount);
       case OBJ_NATIVE: {
         NativeFn native = AS_NATIVE(callee);
         std::vector<Value> newSlots = std::vector<Value>(stack.end() - argCount, stack.end());
@@ -269,6 +302,48 @@ bool VM::callValue(Value callee, int argCount) {
   return false;
 }
 
+ObjUpvalue* VM::captureUpvalue(std::vector<Value> local) {
+  ObjUpvalue* prevUpvalue = NULL;
+  ObjUpvalue* upvalue = openUpvalues;
+  while (upvalue != NULL && &upvalue->location[0] > &local[0]) {
+    prevUpvalue = upvalue;
+    upvalue = upvalue->next;
+  }
+
+  if (upvalue != NULL && &upvalue->location[0] == &local[0]) {
+    return upvalue;
+  }
+
+  ObjUpvalue* createdUpvalue = newUpvalue(local);
+
+  if (prevUpvalue == NULL) {
+    openUpvalues = createdUpvalue;
+  } else {
+    prevUpvalue->next = createdUpvalue;
+  }
+
+  return createdUpvalue;
+}
+
+/**
+ * TODO: Almost certain this is incorrect too. I really should've just used
+ * pointers, but really dead now.
+ */
+void VM::closeUpvalues() {
+  while (openUpvalues != NULL && &openUpvalues->location[0] >= &stack.back()) {
+    ObjUpvalue* upvalue = openUpvalues;
+    upvalue->closed = upvalue->location[0];
+    /** TODO: I don't understand this code, in the book they do 
+     * upvalue->closed = *upvalue->location;
+     * upvalue->location = &upvalue->closed;
+     * 
+     * Isn't that leaving the location the exactly value as before?
+     */
+    // upvalue->location = &upvalue->closed;
+    openUpvalues = upvalue->next;
+  }
+}
+
 void VM::runtimeError(const char* format, ...) {
   va_list args;  
   va_start(args, format);
@@ -279,12 +354,12 @@ void VM::runtimeError(const char* format, ...) {
   CallFrame frame = frames[frameCount - 1];
   // Since our ip is relative to the chunk, I think we can just leave it as just ip
   auto instruction = frame.ip;
-  auto line = frame.function->chunk.getLines()[instruction];
+  auto line = frame.closure->function->chunk.getLines()[instruction];
   std::fprintf(stderr, "[line %d] in script\n", line);
 
   for (int i = frameCount - 1; i >= 0; i--) {
     CallFrame frame = frames[i];
-    ObjFunction* function = frame.function;
+    ObjFunction* function = frame.closure->function;
     auto instruction = frame.ip;
     fprintf(stderr, "[line %d] in ", function->chunk.getLines()[instruction]);
     if (function->name == NULL) {

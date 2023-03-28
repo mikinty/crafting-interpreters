@@ -63,7 +63,11 @@ void Compiler::endScope(Parser* parser) {
   scopeDepth--;
 
   while (localCount > 0 && locals[localCount-1].depth > scopeDepth) {
-    parser->emitByte(OP_POP);
+    if (locals[localCount-1].isCaptured) {
+      parser->emitByte(OP_CLOSE_UPVALUE);
+    } else {
+      parser->emitByte(OP_POP);
+    }
     localCount--;
   }
 }
@@ -94,6 +98,10 @@ ObjFunction* Compiler::getFunction() {
 
 FunctionType Compiler::getType() {
   return type;
+}
+
+Upvalue* Compiler::getUpvalues() {
+  return upvalues;
 }
 
 std::map<TokenType, ParseRule> rules = {
@@ -312,6 +320,9 @@ void Parser::namedVariable(Token name, bool canAssign) {
   if (arg != -1) {
     getOp = OP_GET_LOCAL;
     setOp = OP_SET_LOCAL;
+  } else if ((arg = resolveUpvalue(compiler, &name)) != -1) {
+    getOp = OP_GET_UPVALUE;
+    setOp = OP_SET_UPVALUE;
   } else {
     arg = identifierConstant(&name);
     getOp = OP_GET_GLOBAL;
@@ -456,7 +467,12 @@ void Parser::function(FunctionType type) {
   block();
 
   ObjFunction* function = endCompiler();
-  emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+  emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+
+  for (int i = 0; i < function->upvalueCount; i++) {
+    emitByte(compiler->getUpvalues()[i].isLocal ? 1 : 0);
+    emitByte(compiler->getUpvalues()[i].index);
+  }
 }
 
 void Parser::funDeclaration() {
@@ -651,6 +667,43 @@ int Parser::resolveLocal(Compiler* compiler, Token* name) {
 
   return -1;
 }
+  
+int Parser::addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
+  int upvalueCount = compiler->getFunction()->upvalueCount;
+
+  for (int i = 0; i < upvalueCount; i++) {
+    Upvalue* upvalue = &compiler->getUpvalues()[i];
+    if (upvalue->index == index && upvalue->isLocal == isLocal) {
+      return i;
+    }
+  }
+
+  if (upvalueCount == UINT8_COUNT) {
+    error("Too many closure variables in function");
+    return 0;
+  }
+
+  compiler->getUpvalues()[upvalueCount].isLocal = isLocal;
+  compiler->getUpvalues()[upvalueCount].index = index;
+  return compiler->getFunction()->upvalueCount++;
+}
+
+int Parser::resolveUpvalue(Compiler* compiler, Token* name) {
+  if (compiler->enclosing == NULL) return -1;
+
+  int local = resolveLocal(compiler->enclosing, name);
+  if (local != -1) {
+    compiler->enclosing->getLocals()[local].isCaptured = true;
+    return addUpvalue(compiler, (uint8_t)local, true);
+  }
+
+  int upvalue = resolveUpvalue(compiler->enclosing, name);
+  if (upvalue != -1) {
+    return addUpvalue(compiler, (uint8_t)upvalue, false);
+  }
+
+  return -1;
+}
 
 void Parser::declareVariable() {
   Compiler* compiler = Compiler::GetInstance();
@@ -679,6 +732,7 @@ void Parser::addLocal(Token name) {
   Local* local = &compiler->getLocals()[compiler->getLocalCount()];
   local->name = name;
   local->depth = -1;
+  local->isCaptured = false;
 }
 
 void Parser::defineVariable(uint8_t global) {
