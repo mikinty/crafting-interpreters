@@ -29,6 +29,7 @@ typedef enum
 } FunctionType;
 
 ObjFunction *compile(std::string &source, Chunk &chunk);
+void markCompilerRoots();
 
 class Compiler;
 

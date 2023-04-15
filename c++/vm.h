@@ -39,10 +39,6 @@ typedef struct {
 class VM
 {
 private:
-  CallFrame frames[FRAMES_MAX];
-  int frameCount;
-
-  std::vector<Value> stack;
   InterpretResult run();
   void concatenate();
 
@@ -58,6 +54,9 @@ private:
 
 public:
   // For garbage collection
+  CallFrame frames[FRAMES_MAX];
+  int frameCount;
+  std::vector<Value> stack;
   Obj *objects;
   ObjUpvalue *openUpvalues;
 

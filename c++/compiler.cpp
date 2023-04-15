@@ -6,6 +6,7 @@
 #include <map>
 #include <fmt/core.h>
 #include "object.h"
+#include "memory.h"
 
 Compiler *Compiler::compiler_ = nullptr;
 
@@ -816,4 +817,12 @@ ObjFunction* compile(std::string& source, Chunk& chunk) {
 
   ObjFunction* function = parser.endCompiler();
   return parser.getHadError() ? NULL : function;
+}
+
+void markCompilerRoots() {
+  Compiler* compiler = Compiler::GetInstance();
+  while (compiler != NULL) {
+    markObject((Obj*)compiler->getFunction());
+    compiler = compiler->enclosing;
+  }
 }

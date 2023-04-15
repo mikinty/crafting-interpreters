@@ -2,6 +2,7 @@
 #define clox_memory_h
 
 #include "common.h"
+#include <map>
 
 #define ALLOCATE(type, count) \
   (type *)reallocate(NULL, 0, sizeof(type) * (count))
@@ -19,6 +20,11 @@
                      sizeof(type) * (newCount))
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize);
+void markRoots();
+void markValue(Value& value);
+void markObject(Obj* object);
+void markTable(std::map<ObjString *, Value>& globals);
+void collectGarbage();
 void freeObjects();
 
 #endif
