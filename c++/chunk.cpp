@@ -2,6 +2,7 @@
 #include "object.h"
 #include <iomanip>
 #include <iostream>
+#include "vm.h"
 #include <fmt/core.h>
 #include <fmt/printf.h>
 
@@ -200,7 +201,10 @@ void Chunk::disassembleChunk(const std::string &name)
  */
 int Chunk::addConstant(Value value)
 {
+  VM* vm = VM::GetInstance();
+  vm->stack.push_back(value);
   constants.push_back(value);
+  vm->stack.pop_back();
   return constants.size() - 1;
 }
 

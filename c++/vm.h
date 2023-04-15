@@ -48,6 +48,8 @@ private:
    */
   VM()
   {
+    bytesAllocated = 0;
+    nextGC = 1024 * 1024;
   }
 
   static VM *vm_;
@@ -60,6 +62,8 @@ public:
   Obj *objects;
   ObjUpvalue *openUpvalues;
   std::vector<Obj*> grayStack;
+  size_t bytesAllocated;
+  size_t nextGC;
 
   // String interning
   std::map<uint32_t, ObjString*> strings;

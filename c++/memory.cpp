@@ -10,11 +10,17 @@
 #include "chunk.h"
 #endif
 
+#define GC_HEAP_GROW_FACTOR 2
+
 void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
   if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
     collectGarbage();
 #endif
+
+  auto vm = VM::GetInstance();
+  if (vm->bytesAllocated > vm->nextGC)
+    collectGarbage();
   }
 
   if (newSize == 0) {
@@ -81,18 +87,22 @@ void freeObjects() {
 }
 
 void collectGarbage() {
+  auto vm = VM::GetInstance();
 #ifdef DEBUG_LOG_GC  
   printf("-- gc begin\n");
+  size_t before = vm->bytesAllocated;
 #endif
 
-  auto vm = VM::GetInstance();
   markRoots();
   traceReferences();
   removeWhiteStrings(vm->strings);
   sweep();
 
+  vm->nextGC = vm->bytesAllocated * GC_HEAP_GROW_FACTOR;
+
 #ifdef DEBUG_LOG_GC  
   printf("-- gc end\n");
+  printf("   collected %zu bytes (from %zu to %zu) next at %zu\n", before - vm->bytesAllocated, before, vm->bytesAllocated, vm->nextGC);
 #endif
 }
 

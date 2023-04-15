@@ -69,7 +69,9 @@ static ObjString* allocateString(char* chars, int length, uint32_t hash) {
   str->hash = hash;
 
   auto vm = VM::GetInstance();
+  vm->stack.push_back(OBJ_VAL(str));
   vm->strings.insert(std::pair<uint32_t, ObjString*>(hash, str));
+  vm->stack.pop_back();
 
   return str;
 }

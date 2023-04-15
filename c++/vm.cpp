@@ -14,15 +14,17 @@ static bool isFalsey(Value value) {
 
 void VM::concatenate() {
   ObjString* b = AS_STRING(stack.back());
-  stack.pop_back();
   ObjString* a = AS_STRING(stack.back());
-  stack.pop_back();
   int length = a->length + b->length;
   char* chars = ALLOCATE(char, length + 1);
   memcpy(chars, a->chars, a->length);
   memcpy(chars + a->length, b->chars, b->length);
   chars[length] = '\0';
 
+  // We shouldn't pop these strings yet, because they can be garbage-collected
+  // in the allocate for chars
+  stack.pop_back();
+  stack.pop_back();
   ObjString* result = takeString(chars, length);
   stack.push_back(OBJ_VAL(result));
 }
