@@ -26,5 +26,9 @@ void markObject(Obj* object);
 void markTable(std::map<ObjString *, Value>& globals);
 void collectGarbage();
 void freeObjects();
+void traceReferences();
+void removeWhiteStrings(std::map<uint32_t, ObjString*>& strings);
+void sweep();
+void blackenObject(Obj* object);
 
 #endif

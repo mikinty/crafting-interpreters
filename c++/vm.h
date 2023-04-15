@@ -59,6 +59,7 @@ public:
   std::vector<Value> stack;
   Obj *objects;
   ObjUpvalue *openUpvalues;
+  std::vector<Obj*> grayStack;
 
   // String interning
   std::map<uint32_t, ObjString*> strings;

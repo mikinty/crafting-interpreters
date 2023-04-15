@@ -85,12 +85,23 @@ void collectGarbage() {
   printf("-- gc begin\n");
 #endif
 
+  auto vm = VM::GetInstance();
   markRoots();
-
+  traceReferences();
+  removeWhiteStrings(vm->strings);
+  sweep();
 
 #ifdef DEBUG_LOG_GC  
   printf("-- gc end\n");
 #endif
+}
+
+void removeWhiteStrings(std::map<uint32_t, ObjString*>& strings) {
+  for (auto it = strings.begin(); it != strings.end(); ++it) {
+    if (it->second != NULL && it->second->obj.isMarked) {
+      strings.erase(it);
+    }
+  }
 }
 
 void markRoots() {
@@ -113,6 +124,39 @@ void markRoots() {
   markCompilerRoots();
 }
 
+void traceReferences() {
+  auto vm = VM::GetInstance();
+  while (vm->grayStack.size() > 0) {
+    Obj* object = vm->grayStack.back();
+    vm->grayStack.pop_back();
+    blackenObject(object);
+  }
+}
+
+void sweep() {
+  auto vm = VM::GetInstance();
+
+  Obj* previous = NULL;
+  Obj* object = vm->objects;
+  while (object != NULL) {
+    if (object->isMarked) {
+      object->isMarked = false;
+      previous = object;
+      object = object->next;
+    } else {
+      Obj* unreached = object;
+      object = object->next;
+      if (previous != NULL) {
+        previous->next = object;
+      } else {
+        vm->objects = object;
+      }
+
+      freeObject(unreached);
+    }
+  }
+}
+
 void markTable(std::map<ObjString *, Value>& globals) {
   for (auto it = globals.begin(); it != globals.end(); ++it) {
     markObject((Obj*)it->first);
@@ -124,12 +168,52 @@ void markValue(Value& value) {
   if (IS_OBJ(value)) markObject(AS_OBJ(value));
 }
 
+void markArray(std::vector<Value>& constants) {
+  for (Value& value : constants) {
+    markValue(value);
+  }
+}
+
+void blackenObject(Obj* object) {
+#ifdef DEBUG_LOG_GC  
+  printf("%p blacken ", (void*)object);
+  printValue(OBJ_VAL(object));
+  printf("\n");
+#endif
+  switch (object->type) {
+    case OBJ_CLOSURE: {
+      ObjClosure* closure = (ObjClosure*)object;
+      markObject((Obj*)closure->function);
+      for (ObjUpvalue* upvalue : closure->upvalues) {
+        markObject((Obj*)upvalue);
+      }
+      break;
+    }
+    case OBJ_FUNCTION: {
+      ObjFunction* function = (ObjFunction*)object;
+      markObject((Obj*)function->name);
+      markArray(function->chunk.constants);
+      break;
+    }
+    case OBJ_UPVALUE:
+      markValue(((ObjUpvalue*)object)->closed);
+      break;
+    case OBJ_NATIVE:
+    case OBJ_STRING:
+      break;
+  }
+}
+
 void markObject(Obj* object) {
   if (object == NULL) return;
+  if (object->isMarked) return; // Prevent cycles
 #ifdef DEBUG_LOG_GC  
   printf("%p mark ", (void*)object);
   printValue(OBJ_VAL(object));
   printf("\n");
 #endif
   object->isMarked = true;
+
+  auto vm = VM::GetInstance();
+  vm->grayStack.push_back(object);
 }
