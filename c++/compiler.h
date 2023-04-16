@@ -25,6 +25,8 @@ typedef enum
 typedef enum
 {
   TYPE_FUNCTION,
+  TYPE_INITIALIZER,
+  TYPE_METHOD,
   TYPE_SCRIPT,
 } FunctionType;
 
@@ -118,6 +120,8 @@ public:
   int addUpvalue(Compiler *compiler, uint8_t index, bool isLocal);
   void classDeclaration();
   void dot(bool canAssign);
+  void method();
+  void this_(bool canAssign);
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);
@@ -143,7 +147,7 @@ public:
   Token name;
   int depth;
   bool isCaptured;
-  Local()
+  Local(FunctionType type = TYPE_FUNCTION)
   {
     name = Token(TOKEN_ERROR, 0, 0, 0, "");
     depth = -1;
@@ -176,9 +180,24 @@ private:
     this->scopeDepth = 0;
     this->function = newFunction();
 
+    // So this is kinda bad, I think the default constructor will make
+    // everything a TYPE_FUNCTION. So to fix this if we get the other type, I
+    // will override all of them. TODO: I also don't know if I'm creating the local.name correctly
+    if (type != TYPE_FUNCTION) {
+      for (size_t i = 0; i < UINT8_COUNT; i++) {
+        this->locals[i] = Local(type);
+      }
+    }
     Local local = this->locals[this->localCount++];
     local.depth = 0;
     local.name = Token();
+    if (type != TYPE_FUNCTION) {
+      local.name.source = "this";
+      local.name.length = 4;
+    } else {
+      local.name.source = "";
+      local.name.length = 0;
+    }
   }
   static Compiler *compiler_;
 
@@ -198,7 +217,12 @@ public:
   Local *getLocals();
   ObjFunction *getFunction();
   FunctionType getType();
+  void setType(FunctionType type);
   Upvalue* getUpvalues();
 };
+
+typedef struct ClassCompiler {
+  struct ClassCompiler* enclosing;
+} ClassCompiler;
 
 #endif

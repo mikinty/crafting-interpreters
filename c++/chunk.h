@@ -34,10 +34,12 @@ enum OpCode {
   OP_JUMP_IF_FALSE,
   OP_LOOP,
   OP_CALL,
+  OP_INVOKE,
   OP_CLOSURE,
   OP_CLOSE_UPVALUE,
   OP_RETURN,
   OP_CLASS,
+  OP_METHOD,
 };
 
 typedef struct Obj Obj;
@@ -79,6 +81,7 @@ private:
   std::vector<int> lines;
   int offset = 0;
   int constantInstruction(const std::string& name, int offset);
+  int invokeInstruction(const std::string& name, int offset);
   int byteInstruction(const std::string& name, int offset);
   int jumpInstruction(const std::string& name, int sign, int offset);
 

@@ -50,6 +50,8 @@ private:
   {
     bytesAllocated = 0;
     nextGC = 1024 * 1024;
+    initString = NULL; // prevent GC from trying to collect on initString
+    initString = copyString("init", 4);
   }
 
   static VM *vm_;
@@ -68,6 +70,7 @@ public:
   // String interning
   std::map<uint32_t, ObjString*> strings;
   std::map<ObjString*, Value> globals;
+  ObjString* initString;
 
   InterpretResult interpret(std::string &source);
   Value peek(int distance);
@@ -77,6 +80,10 @@ public:
   void defineNative(const char* name, NativeFn function);
   ObjUpvalue* captureUpvalue(std::vector<Value> local);
   void closeUpvalues();
+  void defineMethod(ObjString* name);
+  bool bindMethod(ObjClass* klass, ObjString* name);
+  bool invoke(ObjString* name, int argCount);
+  bool invokeFromClass(ObjClass* klass, ObjString* name, int argCount);
   
   /**
    * Singletons should not be cloneable.
@@ -96,6 +103,7 @@ public:
   // Destructor
   ~VM()
   {
+    initString = NULL; // Allow the interned string to get collected
     freeObjects();
   }
 };

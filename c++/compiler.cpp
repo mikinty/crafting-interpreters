@@ -8,7 +8,8 @@
 #include "object.h"
 #include "memory.h"
 
-Compiler *Compiler::compiler_ = nullptr;
+Compiler* Compiler::compiler_ = nullptr;
+ClassCompiler* currentClass = NULL;
 
 /**
  * So this is kinda weird. In the book they have a linked list of Compilers.
@@ -26,7 +27,7 @@ Compiler *Compiler::compiler_ = nullptr;
  * 
  * popCompiler will take care of "killing" the existing compiler and then 
  */
-Compiler *Compiler::GetInstance(bool newInstance = false, FunctionType type = TYPE_SCRIPT, ObjString* functionName = NULL)
+Compiler* Compiler::GetInstance(bool newInstance = false, FunctionType type = TYPE_SCRIPT, ObjString* functionName = NULL)
 {
   if (compiler_ == nullptr || newInstance)
   {
@@ -101,6 +102,10 @@ FunctionType Compiler::getType() {
   return type;
 }
 
+void Compiler::setType(FunctionType type) {
+  this->type = type;
+}
+
 Upvalue* Compiler::getUpvalues() {
   return upvalues;
 }
@@ -140,7 +145,7 @@ std::map<TokenType, ParseRule> rules = {
   {TOKEN_PRINT,         ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_RETURN,        ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_SUPER,         ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_THIS,          ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_THIS,          ParseRule(&Parser::this_, NULL, PREC_NONE)},
   {TOKEN_TRUE,          ParseRule(&Parser::literal, NULL, PREC_NONE)},
   {TOKEN_VAR,           ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_WHILE,         ParseRule(NULL, NULL, PREC_NONE)},
@@ -245,7 +250,13 @@ Chunk& Parser::currentChunk() {
 }
 
 void Parser::emitReturn() {
-  emitByte(OP_NIL);
+  Compiler* compiler = Compiler::GetInstance();
+  if (compiler->getType() == TYPE_INITIALIZER) {
+    emitBytes(OP_GET_LOCAL, 0);
+  } else {
+    emitByte(OP_NIL);
+  }
+
   emitByte(OP_RETURN);
 }
 
@@ -312,6 +323,14 @@ void Parser::string(bool canAssign) {
 
 void Parser::variable(bool canAssign) {
   namedVariable(previous, canAssign);
+}
+
+void Parser::this_(bool canAssign) {
+  if (currentClass == NULL) {
+    error("Can't use 'this' outside of a class.");
+    return;
+  }
+  variable(false); 
 }
 
 void Parser::namedVariable(Token name, bool canAssign) {
@@ -410,6 +429,10 @@ void Parser::dot(bool canAssign) {
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
     emitBytes(OP_SET_PROPERTY, name);
+  } else if (match(TOKEN_LEFT_PAREN)) {
+    uint8_t argCount = argumentList();
+    emitBytes(OP_INVOKE, name);
+    emitByte(argCount);
   } else {
     emitBytes(OP_GET_PROPERTY, name);
   }
@@ -495,16 +518,42 @@ void Parser::funDeclaration() {
   defineVariable(global);
 }
 
+void Parser::method() {
+  Compiler* compiler = Compiler::GetInstance();
+  consume(TOKEN_IDENTIFIER, "Expect method name.");
+  uint8_t constant = identifierConstant(&previous);
+  
+  FunctionType type = TYPE_METHOD;
+  if (previous.length == 4 && previous.source == "init") {
+    compiler->setType(TYPE_INITIALIZER);
+  }
+
+  function(type); 
+  emitBytes(OP_METHOD, constant);
+}
+
 void Parser::classDeclaration() {
   consume(TOKEN_IDENTIFIER, "Expect class name.");
+  Token className = previous;
   uint8_t nameConstant = identifierConstant(&previous);
   declareVariable();
 
   emitBytes(OP_CLASS, nameConstant);
   defineVariable(nameConstant);
 
+  ClassCompiler classCompiler;
+  classCompiler.enclosing = currentClass;
+  currentClass = &classCompiler;
+
+  namedVariable(className, false);
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    method();
+  }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+  emitByte(OP_POP); // Remove class name from the stack that we temporarily pushed on
+
+  currentClass = currentClass->enclosing;
 }
 
 void Parser::expressionStatement() {
@@ -596,6 +645,9 @@ void Parser::returnStatement() {
   if (match(TOKEN_SEMICOLON)) {
     emitReturn();
   } else {
+    if (compiler->getType() == TYPE_INITIALIZER) {
+      error("Can't return a value from an initializer.");
+    }
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
     emitByte(OP_RETURN);

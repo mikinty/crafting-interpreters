@@ -91,6 +91,16 @@ int Chunk::constantInstruction(const std::string &name, int offset)
   return offset + 2;
 }
 
+
+int Chunk::invokeInstruction(const std::string& name, int offset) {
+  uint8_t constant = code[offset + 1];
+  uint8_t argCount = code[offset + 2];
+  printf("%-16s (%d args) %4d '", name.c_str(), argCount, constant);
+  printValue(constants[constant]);
+  printf("'\n");
+  return offset+3;
+}
+
 int Chunk::disassembleInstruction(int offset)
 {
   std::cout << std::setfill('0') << std::setw(4) << offset << " ";
@@ -162,6 +172,8 @@ int Chunk::disassembleInstruction(int offset)
     return jumpInstruction("OP_LOOP", -1, offset);
   case OP_CALL:
     return byteInstruction("OP_CALL", offset);
+  case OP_INVOKE:
+    return invokeInstruction("OP_INVOKE", offset);
   case OP_CLOSURE:
   {
     offset++;
@@ -186,6 +198,8 @@ int Chunk::disassembleInstruction(int offset)
     return simpleInstruction("OP_RETURN", offset);
   case OP_CLASS:
     return constantInstruction("OP_CLASS", offset);
+  case OP_METHOD:
+    return constantInstruction("OP_METHOD", offset);
   default:
     std::cout << fmt::format("Unknown opcode {}\n", instruction);
     return offset + 1;
