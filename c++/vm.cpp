@@ -405,11 +405,10 @@ bool VM::callValue(Value callee, int argCount) {
 }
 
 bool VM::invokeFromClass(ObjClass* klass, ObjString* name, int argCount) {
-  Value method;
   if (klass->methods.find(name) == klass->methods.end()) {
     runtimeError("Undefined property '%s'.", name->chars);
   }
-  return call(AS_CLOSURE(method), argCount);
+  return call(AS_CLOSURE(klass->methods[name]), argCount);
 }
 
 bool VM::invoke(ObjString* name, int argCount) {
@@ -424,23 +423,21 @@ bool VM::invoke(ObjString* name, int argCount) {
 
   // Handle cases where class.field() is calling the function stored in the
   // field and not a class method called field
-  Value value;
   if (instance->fields.find(name) != instance->fields.end()) {
-    stack[stack.size() - argCount - 1] = value;
-    return callValue(value, argCount);
+    stack[stack.size() - argCount - 1] = instance->fields[name];
+    return callValue(instance->fields[name], argCount);
   }
 
   return invokeFromClass(instance->klass, name, argCount);
 }
 
 bool VM::bindMethod(ObjClass* klass, ObjString* name) {
-  Value method;
   if (klass->methods.find(name) == klass->methods.end()) {
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
 
-  ObjBoundMethod* bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+  ObjBoundMethod* bound = newBoundMethod(peek(0), AS_CLOSURE(klass->methods[name]));
 
   stack.pop_back();
   stack.push_back(OBJ_VAL(bound));
