@@ -122,6 +122,8 @@ public:
   void dot(bool canAssign);
   void method();
   void this_(bool canAssign);
+  void super_(bool canAssign);
+  Token syntheticToken(const std::string& text);
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);
@@ -223,6 +225,7 @@ public:
 
 typedef struct ClassCompiler {
   struct ClassCompiler* enclosing;
+  bool hasSuperclass;
 } ClassCompiler;
 
 #endif

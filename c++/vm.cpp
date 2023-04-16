@@ -156,6 +156,16 @@ InterpretResult VM::run() {
         frame.closure->upvalues[slot]->location[0] = peek(0);
         break;
       }
+      case OP_GET_SUPER: {
+        ObjString* name = READ_STRING();
+        ObjClass* superclass = AS_CLASS(stack.back());
+        stack.pop_back();
+
+        if (!bindMethod(superclass, name)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+      }
       case OP_EQUAL: {
         Value b = stack.back();
         stack.pop_back();
@@ -201,6 +211,17 @@ InterpretResult VM::run() {
         ObjString* method = READ_STRING();
         int argCount = READ_BYTE();
         if (!invoke(method, argCount)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        frame = frames[frameCount - 1];
+        break;
+      }
+      case OP_SUPER_INVOKE: {
+        ObjString* method = READ_STRING();
+        int argCount = READ_BYTE();
+        ObjClass* superclass = AS_CLASS(stack.back());
+        stack.pop_back();
+        if (!invokeFromClass(superclass, method, argCount)) {
           return INTERPRET_RUNTIME_ERROR;
         }
         frame = frames[frameCount - 1];
@@ -277,6 +298,20 @@ InterpretResult VM::run() {
         stack.pop_back();
         stack.pop_back();
         stack.push_back(value);
+        break;
+      }
+      case OP_INHERIT: {
+        Value superclass = peek(1);
+        if (!IS_CLASS(superclass)) {
+          runtimeError("Superclass must be a class");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        ObjClass* subclass = AS_CLASS(peek(0));
+        auto superclassMethods = AS_CLASS(superclass)->methods;
+        for (auto it = superclassMethods.begin(); it != superclassMethods.end(); ++it) {
+          subclass->methods[it->first] = it->second;
+        }
+        stack.pop_back(); // pop off the subclass
         break;
       }
       case OP_METHOD:
