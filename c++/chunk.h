@@ -19,6 +19,8 @@ enum OpCode {
   OP_GET_UPVALUE,
   OP_SET_UPVALUE,
   OP_EQUAL,
+  OP_SET_PROPERTY,
+  OP_GET_PROPERTY,
   OP_GREATER,
   OP_LESS,
   OP_ADD,
@@ -35,6 +37,7 @@ enum OpCode {
   OP_CLOSURE,
   OP_CLOSE_UPVALUE,
   OP_RETURN,
+  OP_CLASS,
 };
 
 typedef struct Obj Obj;

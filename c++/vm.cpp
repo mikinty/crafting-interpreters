@@ -232,6 +232,42 @@ InterpretResult VM::run() {
           frame = frames[frameCount-1];
           break;
         }
+      case OP_CLASS: {
+        stack.push_back(OBJ_VAL(newClass(READ_STRING())));
+        break;
+      }
+      case OP_GET_PROPERTY: {
+        if (!IS_INSTANCE(peek(0))) {
+          runtimeError("Only instances have properties.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        ObjInstance* instance = AS_INSTANCE(peek(0));
+        ObjString* name = READ_STRING();
+
+        if (instance->fields.find(name) != instance->fields.end()) {
+          stack.pop_back(); // instance
+          stack.push_back(instance->fields[name]);
+          break;
+        }
+
+        runtimeError("Undefined property '%s'.", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      case OP_SET_PROPERTY: {
+        if (!IS_INSTANCE(peek(1))) {
+          runtimeError("Only instances have properties.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        ObjInstance* instance = AS_INSTANCE(peek(1));
+        instance->fields[READ_STRING()] = peek(0);
+        Value value = stack.back();
+        stack.pop_back();
+        stack.pop_back();
+        stack.push_back(value);
+        break;
+      }
       default:
         runtimeError("Unimplemented instruction in VM run()");
         return INTERPRET_RUNTIME_ERROR;
@@ -286,6 +322,11 @@ bool VM::call(ObjClosure* closure, int argCount) {
 bool VM::callValue(Value callee, int argCount) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
+      case OBJ_CLASS: {
+        ObjClass* klass = AS_CLASS(callee);
+        stack[stack.size() - 1 - argCount - 1] = OBJ_VAL(newInstance(klass));
+        return true;
+      }
       case OBJ_CLOSURE: 
         return call(AS_CLOSURE(callee), argCount);
       case OBJ_NATIVE: {

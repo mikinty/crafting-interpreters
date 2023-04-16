@@ -116,6 +116,8 @@ public:
   void returnStatement();
   int resolveUpvalue(Compiler *compiler, Token *name);
   int addUpvalue(Compiler *compiler, uint8_t index, bool isLocal);
+  void classDeclaration();
+  void dot(bool canAssign);
 };
 
 using ParseFn = void (Parser::*)(bool canAssign);

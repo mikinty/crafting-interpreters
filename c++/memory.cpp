@@ -38,6 +38,10 @@ static void freeObject(Obj* object) {
   printf("%p free type %d\n\n", (void*)object, object->type);
 #endif
   switch (object->type) {
+    case OBJ_CLASS: {
+      FREE(ObjClass, object);
+      break;
+    }
     case OBJ_CLOSURE: {
       ObjClosure* closure = (ObjClosure*)object;
       // TODO: not sure I did this freeing right. Also I really shouldn't be
@@ -66,6 +70,10 @@ static void freeObject(Obj* object) {
       ObjFunction* function = (ObjFunction*)object;
       function->chunk.freeChunk();
       FREE(ObjFunction, object);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      FREE(ObjInstance, object);
       break;
     }
   }
@@ -191,6 +199,11 @@ void blackenObject(Obj* object) {
   printf("\n");
 #endif
   switch (object->type) {
+    case OBJ_CLASS: {
+      ObjClass* klass = (ObjClass*)object;
+      markObject((Obj*)klass->name);
+      break;
+    }
     case OBJ_CLOSURE: {
       ObjClosure* closure = (ObjClosure*)object;
       markObject((Obj*)closure->function);
@@ -203,6 +216,12 @@ void blackenObject(Obj* object) {
       ObjFunction* function = (ObjFunction*)object;
       markObject((Obj*)function->name);
       markArray(function->chunk.constants);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      ObjInstance* instance = (ObjInstance*)object;
+      markObject((Obj*)instance->klass);
+      markTable(instance->fields);
       break;
     }
     case OBJ_UPVALUE:

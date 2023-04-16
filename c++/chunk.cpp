@@ -130,6 +130,10 @@ int Chunk::disassembleInstruction(int offset)
     return constantInstruction("OP_GET_UPVALUE", offset);
   case OP_SET_UPVALUE:
     return constantInstruction("OP_SET_UPVALUE", offset);
+  case OP_GET_PROPERTY:
+    return constantInstruction("OP_GET_PROPERTY", offset);
+  case OP_SET_PROPERTY:
+    return constantInstruction("OP_SET_PROPERTY", offset);
   case OP_EQUAL:
     return simpleInstruction("OP_EQUAL", offset);
   case OP_GREATER:
@@ -180,6 +184,8 @@ int Chunk::disassembleInstruction(int offset)
     return simpleInstruction("OP_CLOSE_UPVALUE", offset);
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
+  case OP_CLASS:
+    return constantInstruction("OP_CLASS", offset);
   default:
     std::cout << fmt::format("Unknown opcode {}\n", instruction);
     return offset + 1;

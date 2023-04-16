@@ -111,7 +111,7 @@ std::map<TokenType, ParseRule> rules = {
   {TOKEN_LEFT_BRACE,    ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_RIGHT_BRACE,   ParseRule(NULL, NULL, PREC_NONE)},
   {TOKEN_COMMA,         ParseRule(NULL, NULL, PREC_NONE)},
-  {TOKEN_DOT,           ParseRule(NULL, NULL, PREC_NONE)},
+  {TOKEN_DOT,           ParseRule(NULL, &Parser::dot, PREC_CALL)},
   {TOKEN_MINUS,         ParseRule(&Parser::unary, &Parser::binary, PREC_TERM)},
   {TOKEN_PLUS,          ParseRule(NULL, &Parser::binary, PREC_TERM)},
   {TOKEN_SEMICOLON,     ParseRule(NULL, NULL, PREC_NONE)},
@@ -403,6 +403,18 @@ void Parser::call(bool canAssign) {
   emitBytes(OP_CALL, argCount);
 }
 
+void Parser::dot(bool canAssign) {
+  consume(TOKEN_IDENTIFIER, "Expect property name after '.'");
+  uint8_t name = identifierConstant(&previous);
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    expression();
+    emitBytes(OP_SET_PROPERTY, name);
+  } else {
+    emitBytes(OP_GET_PROPERTY, name);
+  }
+}
+
 void Parser::literal(bool canAssign) {
   switch (previous.type) {
     case TOKEN_FALSE: emitByte(OP_FALSE); break;
@@ -481,6 +493,18 @@ void Parser::funDeclaration() {
   markInitialized();
   function(TYPE_FUNCTION);
   defineVariable(global);
+}
+
+void Parser::classDeclaration() {
+  consume(TOKEN_IDENTIFIER, "Expect class name.");
+  uint8_t nameConstant = identifierConstant(&previous);
+  declareVariable();
+
+  emitBytes(OP_CLASS, nameConstant);
+  defineVariable(nameConstant);
+
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
 }
 
 void Parser::expressionStatement() {
@@ -760,7 +784,9 @@ uint8_t Parser::argumentList() {
 }
 
 void Parser::declaration() {
-  if (match(TOKEN_FUN)) {
+  if (match(TOKEN_CLASS)) {
+    classDeclaration();
+  } else if (match(TOKEN_FUN)) {
     funDeclaration();
   } else if (match(TOKEN_VAR)) {
     varDeclaration();
